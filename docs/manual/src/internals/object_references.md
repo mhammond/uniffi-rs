@@ -1,3 +1,5 @@
+# TODO: this needs updating for the new Threadsafe-only/Arc world.
+
 # Managing Object References
 
 Uniffi [interfaces](../udl/interfaces.md) represent instances of objects
