@@ -36,6 +36,7 @@ lazy_static! {
 /// component is compiled and available for use and then executes the foreign language script,
 /// returning successfully iff the script exits successfully.
 pub fn run_foreign_language_testcase(pkg_dir: &str, udl_file: &str, test_file: &str) -> Result<()> {
+    println!("executing test: {}", test_file);
     let cdylib_file = ensure_compiled_cdylib(pkg_dir)?;
     let out_dir = Path::new(cdylib_file.as_str())
         .parent()

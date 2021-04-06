@@ -58,6 +58,17 @@ pub fn generate_bindings(config: &Config, ci: &ComponentInterface) -> Result<Str
         .map_err(|_| anyhow::anyhow!("failed to render kotlin bindings"))
 }
 
+fn get_kotlinc() -> Command {
+    if cfg!(target_os = "windows") {
+        // kotlinc.bat probably lives somewhere like: %ProgramFiles%\Android\Android Studio\plugins\Kotlin\kotlinc\bin
+        let mut command = Command::new("cmd");
+        command.arg("/C").arg("kotlinc");
+        command
+    } else {
+        Command::new("kotlinc")
+    }
+}
+
 /// Generate kotlin bindings for the given namespace, then use the kotlin
 /// command-line tools to compile them into a .jar file.
 pub fn compile_bindings(config: &Config, ci: &ComponentInterface, out_dir: &Path) -> Result<()> {
@@ -65,7 +76,7 @@ pub fn compile_bindings(config: &Config, ci: &ComponentInterface, out_dir: &Path
     kt_file.push(format!("{}.kt", ci.namespace()));
     let mut jar_file = PathBuf::from(out_dir);
     jar_file.push(format!("{}.jar", ci.namespace()));
-    let status = Command::new("kotlinc")
+    let status = get_kotlinc()
         .arg("-Xopt-in=kotlin.ExperimentalUnsignedTypes")
         .arg("-classpath")
         .arg(env::var("CLASSPATH").unwrap_or_else(|_| "".to_string()))
