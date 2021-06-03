@@ -80,7 +80,7 @@ mod filters {
                 "uniffi::ViaFfi::lower is not supported for callback interfaces ({})",
                 type_name
             ),
-            _ => format!("<{} as uniffi::ViaFfi>::lower({})", type_rs(type_)?, nm),
+            _ => format!("<{} as uniffi::ViaFfi>::lower({}.into())", type_rs(type_)?, nm),
         })
     }
 
@@ -90,11 +90,11 @@ mod filters {
         // This will panic if the bindings provide an invalid value over the FFI.
         Ok(match type_ {
             Type::CallbackInterface(type_name) => format!(
-                "Box::new(<{}Proxy as uniffi::ViaFfi>::try_lift({}).unwrap())",
+                "Box::new(<{}Proxy as uniffi::ViaFfi>::try_lift({}).unwrap().into())",
                 type_name, nm,
             ),
             _ => format!(
-                "<{} as uniffi::ViaFfi>::try_lift({}).unwrap()",
+                "<{} as uniffi::ViaFfi>::try_lift({}).unwrap().into()",
                 type_rs(type_)?,
                 nm
             ),

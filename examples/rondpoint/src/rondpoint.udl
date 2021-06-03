@@ -122,6 +122,9 @@ interface Optionneur {
 
   // Enums, which we have to treat as strings in the UDL frontend.
   Enumeration sinon_enum(optional Enumeration value = "Trois");
+
+  // A custom type in Rust, but must be declared as a string here.
+  string sinon_type_personnalise(optional string value = "default");
 };
 
 dictionary OptionneurDictionnaire {

@@ -144,3 +144,7 @@ affirmEnchaine(
   st.to_string_double,
   rustyFloatToStr,
 )
+
+# Optionneur test mostly missing for Python!
+op = Optionneur()
+assert(op.sinon_type_personnalise("as string") == "as string")

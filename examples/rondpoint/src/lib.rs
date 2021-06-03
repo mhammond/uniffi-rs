@@ -137,6 +137,25 @@ impl Retourneur {
     }
 }
 
+// Here is a custom type we want to use in our implementation.
+// The FFI itself must treat it as one of the primitive types supported by the
+// FFI (eg, String, a number), but it's convenient for the Rust side of the
+// world to treat it as the custom type.
+// So, as long as we implement `From` for both directions this works out OK.
+struct TypePersonnalise(String);
+
+impl From<String> for TypePersonnalise {
+    fn from(s: String) -> TypePersonnalise {
+        TypePersonnalise(s)
+    }
+}
+
+impl From<TypePersonnalise> for String {
+    fn from(t: TypePersonnalise) -> String {
+        t.0
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Stringifier;
 
@@ -268,6 +287,10 @@ impl Optionneur {
     }
 
     fn sinon_enum(&self, value: Enumeration) -> Enumeration {
+        value
+    }
+
+    fn sinon_type_personnalise(&self, value: TypePersonnalise) -> TypePersonnalise {
         value
     }
 }
