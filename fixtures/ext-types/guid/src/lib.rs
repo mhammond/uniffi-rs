@@ -1,9 +1,5 @@
-// A trivial Guid implementation.
-struct Guid(String);
-
-// A simple `type JSONObject = serde_json::Value;` would work, except that
-// we can't impl ViaFfi `impl doesn't use only types from inside the current crate`
-struct JSONObject(serde_json::Value);
+// A trivial guid.
+pub struct Guid(pub String);
 
 fn get_guid(guid: Option<Guid>) -> Guid {
     match guid {
@@ -12,39 +8,18 @@ fn get_guid(guid: Option<Guid>) -> Guid {
     }
 }
 
-fn get_string(s: Option<String>) -> String {
-    match s {
-        Some(s) => s,
-        None => "NewString".to_string(),
-    }
+pub struct GuidHelper {
+    pub guid: Guid,
+    pub guids: Vec<Guid>,
 }
 
-fn get_json_object(v: Option<JSONObject>) -> Option<JSONObject> {
-    match v {
-        Some(v) => Some(v),
-        None => Some(JSONObject(serde_json::json!({"foo": "bar"}))),
-    }
-}
-
-struct ExtTypes {
-    guid: Guid,
-    guids: Vec<Guid>,
-    json: JSONObject,
-    jsons: Vec<JSONObject>,
-}
-
-fn get_ext_types(vals: Option<ExtTypes>) -> ExtTypes {
+fn get_guid_helper(vals: Option<GuidHelper>) -> GuidHelper {
     match vals {
-        None => ExtTypes {
+        None => GuidHelper {
             guid: Guid("first-guid".to_string()),
             guids: vec![
                 Guid("second-guid".to_string()),
                 Guid("third-guid".to_string()),
-            ],
-            json: JSONObject(serde_json::json!({"foo": "bar"})),
-            jsons: vec![
-                JSONObject(serde_json::json!(["an", "array"])),
-                JSONObject(serde_json::json!(3)),
             ],
         },
         Some(vals) => vals,
@@ -91,9 +66,14 @@ macro_rules! viaffi_simple_string {
     }
 }
 
-viaffi_simple_string!(JSONObject, self, self.0.to_string(), |s: String| Self(
-    serde_json::from_str(&s).unwrap()
-));
 viaffi_simple_string!(Guid, self, self.0, |s| Self(s));
 
-include!(concat!(env!("OUT_DIR"), "/external-types.uniffi.rs"));
+include!(concat!(env!("OUT_DIR"), "/guid.uniffi.rs"));
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
+}

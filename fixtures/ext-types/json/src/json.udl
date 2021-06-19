@@ -1,0 +1,12 @@
+[External]
+typedef string JSONObject;
+
+dictionary JSONHelper {
+    JSONObject json;
+    sequence<JSONObject> jsons;
+};
+
+namespace ext_types_json {
+    JSONObject get_json_object(optional JSONObject? ob);
+    JSONHelper get_json_helper(optional JSONHelper? vals);
+};

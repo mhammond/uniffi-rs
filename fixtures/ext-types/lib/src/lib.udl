@@ -1,0 +1,20 @@
+[External]
+typedef string Guid;
+
+[External]
+typedef string GuidHelper;
+
+[External]
+typedef string JSONObject;
+
+[External]
+typedef string JSONHelper;
+
+dictionary LibHelper {
+    JSONHelper json_helper;
+    GuidHelper guid_helper;
+};
+
+namespace ext_types_lib {
+    LibHelper get_lib_helper(optional LibHelper? vals);
+};
