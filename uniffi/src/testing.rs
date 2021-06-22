@@ -9,7 +9,7 @@
 //! and should instead use the `build_foreign_language_testcases!` macro provided by
 //! the `uniffi_macros` crate.
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use cargo_metadata::Message;
 use lazy_static::lazy_static;
 use std::{
@@ -35,7 +35,11 @@ lazy_static! {
 /// a foreign-language test file that exercises that component's bindings. It ensures that the
 /// component is compiled and available for use and then executes the foreign language script,
 /// returning successfully iff the script exits successfully.
-pub fn run_foreign_language_testcase(pkg_dir: &str, udl_file: &str, test_file: &str) -> Result<()> {
+pub fn run_foreign_language_testcase(
+    pkg_dir: &str,
+    udl_files: &[&str],
+    test_file: &str,
+) -> Result<()> {
     let cdylib_file = ensure_compiled_cdylib(pkg_dir)?;
     let out_dir = Path::new(cdylib_file.as_str())
         .parent()
@@ -43,7 +47,7 @@ pub fn run_foreign_language_testcase(pkg_dir: &str, udl_file: &str, test_file: &
         .to_str()
         .unwrap();
     let _lock = UNIFFI_BINDGEN.lock();
-    run_uniffi_bindgen_test(out_dir, udl_file, test_file)?;
+    run_uniffi_bindgen_test(out_dir, udl_files, test_file)?;
     Ok(())
 }
 
@@ -140,9 +144,10 @@ pub fn ensure_compiled_cdylib(pkg_dir: &str) -> Result<String> {
 /// on the `uniffi_bindgen` crate and execute its methods in-process. This is useful for folks
 /// who are working on uniffi itself and want to test out their changes to the bindings generator.
 #[cfg(not(feature = "builtin-bindgen"))]
-fn run_uniffi_bindgen_test(out_dir: &str, udl_file: &str, test_file: &str) -> Result<()> {
+fn run_uniffi_bindgen_test(out_dir: &str, udl_files: &[&str], test_file: &str) -> Result<()> {
+    let udl_files = udl_files.map(|&x| x).collect::<Vec<&str>>().join("\n");
     let status = Command::new("uniffi-bindgen")
-        .args(&["test", out_dir, udl_file, test_file])
+        .args(&["test", out_dir, udl_files, test_file])
         .status()?;
     if !status.success() {
         bail!("Error while running tests: {}",);
@@ -151,6 +156,15 @@ fn run_uniffi_bindgen_test(out_dir: &str, udl_file: &str, test_file: &str) -> Re
 }
 
 #[cfg(feature = "builtin-bindgen")]
-fn run_uniffi_bindgen_test(out_dir: &str, udl_file: &str, test_file: &str) -> Result<()> {
-    uniffi_bindgen::run_tests(out_dir, udl_file, vec![test_file], None)
+fn run_uniffi_bindgen_test(out_dir: &str, udl_files: &[&str], test_file: &str) -> Result<()> {
+    // clone of `guess_crate_root
+    let crate_root = Path::new(udl_files.last().unwrap())
+        .parent()
+        .ok_or_else(|| anyhow!("UDL file has no parent folder!"))?
+        .parent()
+        .ok_or_else(|| anyhow!("UDL file has no grand-parent folder!"))?;
+    if !crate_root.join("Cargo.toml").is_file() {
+        bail!("UDL file does not appear to be inside a crate")
+    }
+    uniffi_bindgen::run_tests(out_dir, crate_root, udl_files, vec![test_file], None)
 }
