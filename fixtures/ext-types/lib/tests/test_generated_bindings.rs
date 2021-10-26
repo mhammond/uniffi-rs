@@ -5,5 +5,8 @@ uniffi_macros::build_foreign_language_testcases!(
         "../uniffi-one/src/uniffi-one.udl",
         "src/ext-types-lib.udl",
     ],
-    ["tests/bindings/test_imported_types.py",]
+    [
+        "tests/bindings/test_imported_types.py", // should rename this!
+        "tests/bindings/test_ext_types.kts",
+    ]
 );
