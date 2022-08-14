@@ -17,8 +17,8 @@ impl SimCard for RustySim {
 }
 
 // namespace functions.
-fn get_sim_cards() -> Vec<Arc<dyn SimCard>> {
-    vec![Arc::new(RustySim {})]
+fn get_sim_cards() -> Vec<Arc<Box<dyn SimCard>>> {
+    vec![Arc::new(Box::new(RustySim {}))]
 }
 
 // A trait for the foreign callback.
