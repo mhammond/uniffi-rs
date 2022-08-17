@@ -14,7 +14,7 @@ r#{{ func.name() }}({% call _arg_list_rs_call(func) -%})
                 Otherwise, we pass the Arc directly
             -#}
             {% if arg.by_ref() %}
-                Ok(ref val) => &***val,
+                Ok(ref val) => &**val,
             {% else %}
                 Ok(val) => val,
             {% endif %}

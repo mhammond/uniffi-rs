@@ -17,16 +17,16 @@ impl SimCard for RustySim {
 }
 
 // namespace functions.
-fn get_sim_cards() -> Vec<Arc<Box<dyn SimCard>>> {
-    vec![Arc::new(Box::new(RustySim {}))]
+fn get_sim_cards() -> Vec<Arc<dyn SimCard>> {
+    vec![Arc::new(RustySim {})]
 }
 
 // A trait for the foreign callback.
 // TODO: pass the SimCard.
 pub trait OnCallAnswered {
-    fn hello(&self, sim: Arc<Box<dyn SimCard>>) -> String;
-    fn busy(&self, sim: Arc<Box<dyn SimCard>>);
-    fn text_received(&self, sim: Arc<Box<dyn SimCard>>, text: String);
+    fn hello(&self, sim: Arc<dyn SimCard>) -> String;
+    fn busy(&self, sim: Arc<dyn SimCard>);
+    fn text_received(&self, sim: Arc<dyn SimCard>, text: String);
 }
 
 #[derive(Debug, Clone)]
@@ -35,7 +35,7 @@ impl Telephone {
     fn new() -> Self {
         Telephone
     }
-    fn call(&self, sim: Arc<Box<dyn SimCard>>, domestic: bool, call_responder: Box<dyn OnCallAnswered>) {
+    fn call(&self, sim: Arc<dyn SimCard>, domestic: bool, call_responder: Box<dyn OnCallAnswered>) {
         if domestic {
             let _ = call_responder.hello(sim.clone());
         } else {
