@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 // SIM cards.
-trait SimCard: Send + Sync {
+pub trait SimCard: Send + Sync {
     fn name(&self) -> String;
 }
 
@@ -24,9 +24,9 @@ fn get_sim_cards() -> Vec<Arc<Box<dyn SimCard>>> {
 // A trait for the foreign callback.
 // TODO: pass the SimCard.
 pub trait OnCallAnswered {
-    fn hello(&self) -> String;
-    fn busy(&self);
-    fn text_received(&self, text: String);
+    fn hello(&self, sim: Arc<Box<dyn SimCard>>) -> String;
+    fn busy(&self, sim: Arc<Box<dyn SimCard>>);
+    fn text_received(&self, sim: Arc<Box<dyn SimCard>>, text: String);
 }
 
 #[derive(Debug, Clone)]
@@ -35,12 +35,12 @@ impl Telephone {
     fn new() -> Self {
         Telephone
     }
-    fn call(&self, _sim: &dyn SimCard, domestic: bool, call_responder: Box<dyn OnCallAnswered>) {
+    fn call(&self, sim: Arc<Box<dyn SimCard>>, domestic: bool, call_responder: Box<dyn OnCallAnswered>) {
         if domestic {
-            let _ = call_responder.hello();
+            let _ = call_responder.hello(sim.clone());
         } else {
-            call_responder.busy();
-            call_responder.text_received("Not now, I'm on another call!".into());
+            call_responder.busy(sim.clone());
+            call_responder.text_received(sim.clone(), "Not now, I'm on another call!".into());
         }
     }
 }

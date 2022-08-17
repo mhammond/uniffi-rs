@@ -8,15 +8,20 @@ class OnCallAnsweredImpl(OnCallAnswered):
         self.yes_count = 0
         self.busy_count = 0
         self.string_received = ""
+        self.last_sim = None
 
-    def hello(self):
+    def hello(self, sim):
+        print("got hello on sim", sim.name())
+        self.last_sim = sim
         self.yes_count += 1
         return f"Hi hi {self.yes_count}"
 
-    def busy(self):
+    def busy(self, sim):
+        self.last_sim = sim
         self.busy_count += 1
 
-    def text_received(self, text):
+    def text_received(self, sim, text):
+        self.last_sim = sim
         self.string_received = text
 
 sim = get_sim_cards()[0]
@@ -40,3 +45,5 @@ cb_object2 = OnCallAnsweredImpl()
 telephone.call(sim, domestic=True, call_responder=cb_object2)
 assert cb_object2.busy_count == 0, f"yes_count={cb_object2.busy_count} (should be 0)"
 assert cb_object2.yes_count == 1, f"yes_count={cb_object2.yes_count} (should be 1)"
+
+print("The last call was made on the SIM card", cb_object2.last_sim.name())

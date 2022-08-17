@@ -12,12 +12,12 @@ interface SimCard {
 // Make calls on one of the sim cards, call back to foreign code with the call status.
 interface Telephone {
   constructor();
-  void call([ByRef]SimCard sim, boolean domestic, OnCallAnswered call_responder);
+  void call(SimCard sim, boolean domestic, OnCallAnswered call_responder);
 };
 
 // This is a trait implemented on the foreign side.
 callback interface OnCallAnswered {
-  string hello();
-  void busy();
-  void text_received(string text);
+  string hello(SimCard sim);
+  void busy(SimCard sim);
+  void text_received(SimCard sim, string text);
 };
