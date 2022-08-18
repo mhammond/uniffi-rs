@@ -108,14 +108,12 @@ impl Object {
         self.imp.id()
     }
 
-    // This is the type as declared by Rust - `type_name` isn't a great name
-    // though - maybe `decl_name`?
-    // XXX - TODO - wrong - getting `r#Box<dyn Animal>` instead of `Box<dyn r#Animal>`
+    pub fn is_trait(&self) -> bool {
+        matches!(self.imp, ObjectImpl::Trait(_))
+    }
+
     pub fn type_name(&self) -> String {
-        match &self.imp {
-            ObjectImpl::Struct(name) => name.clone(),
-            ObjectImpl::Trait(name) => format!("Box<dyn {}>", name),
-        }
+        self.imp.id().to_string()
     }
 
     pub fn type_(&self) -> Type {

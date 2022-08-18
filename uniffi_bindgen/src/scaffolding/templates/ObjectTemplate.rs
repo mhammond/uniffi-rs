@@ -14,7 +14,11 @@
 // if they are not, but unfortunately it fails with an unactionably obscure error message.
 // By asserting the requirement explicitly, we help Rust produce a more scrutable error message
 // and thus help the user debug why the requirement isn't being met.
+{% if obj.is_trait() -%}
+uniffi::deps::static_assertions::assert_impl_all!(Box<dyn r#{{ obj.type_name() }}>: Sync, Send);
+{%- else -%}
 uniffi::deps::static_assertions::assert_impl_all!(r#{{ obj.type_name() }}: Sync, Send);
+{%- endif -%}
 
 {% let ffi_free = obj.ffi_object_free() -%}
 #[doc(hidden)]
@@ -22,8 +26,14 @@ uniffi::deps::static_assertions::assert_impl_all!(r#{{ obj.type_name() }}: Sync,
 pub extern "C" fn {{ ffi_free.name() }}(ptr: *const std::os::raw::c_void, call_status: &mut uniffi::RustCallStatus) {
     uniffi::call_with_output(call_status, || {
         assert!(!ptr.is_null());
+        {% if obj.is_trait() -%}
+        {#- traits are lowered as a Box<T> -#}
+        // XXX - not sure this is correct.
+        drop(unsafe { Box::from_raw(ptr as *mut Box<dyn r#{{ obj.type_name() }}>) })
+        {%- else -%}
         {#- turn it into an Arc and explicitly drop it. #}
         drop(unsafe { std::sync::Arc::from_raw(ptr as *const r#{{ obj.type_name() }}) })
+        {%- endif -%}
     })
 }
 
