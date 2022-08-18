@@ -47,3 +47,6 @@ assert cb_object2.busy_count == 0, f"yes_count={cb_object2.busy_count} (should b
 assert cb_object2.yes_count == 1, f"yes_count={cb_object2.yes_count} (should be 1)"
 
 print("The last call was made on the SIM card", cb_object2.last_sim.name())
+cb_object2.last_sim = None
+print("Rust thinks the last call was made on the SIM card", telephone.get_last_sim().name())
+

@@ -13,6 +13,7 @@ interface SimCard {
 interface Telephone {
   constructor();
   void call(SimCard sim, boolean domestic, OnCallAnswered call_responder);
+  SimCard? get_last_sim();
 };
 
 // This is a trait implemented on the foreign side.
