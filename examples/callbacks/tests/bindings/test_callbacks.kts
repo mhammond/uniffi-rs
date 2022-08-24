@@ -12,16 +12,16 @@ class OnCallAnsweredImpl : OnCallAnswered {
     var busyCount: Int = 0
     var stringReceived = ""
 
-    override fun hello(): String {
+    override fun hello(sim: SimCard): String {
         yesCount ++
         return "Hi hi $yesCount"
     }
 
-    override fun busy() {
+    override fun busy(sim: SimCard) {
         busyCount ++
     }
 
-    override fun textReceived(text: String) {
+    override fun textReceived(sim: SimCard, text: String) {
         stringReceived = text
     }
 }
