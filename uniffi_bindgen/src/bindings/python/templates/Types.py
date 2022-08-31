@@ -64,6 +64,10 @@
 {%- when Type::Object(imp) %}
 {%- let name = imp.id() %}
 {%- include "ObjectTemplate.py" %}
+{%- let obj = ci.get_object_definition(name).unwrap() %}
+{%- if obj.is_trait() -%}
+{%- include "CallbackInterfaceTraitTemplate.py" %}
+{%- endif -%}
 
 {%- when Type::Timestamp %}
 {%- include "TimestampHelper.py" %}
