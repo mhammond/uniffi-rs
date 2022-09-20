@@ -10,6 +10,22 @@ pub trait OnCallAnswered {
     fn text_received(&self, text: String);
 }
 
+struct DefaultAnswerer {}
+
+impl OnCallAnswered for DefaultAnswerer {
+    fn hello(&self) -> String {
+        "The person you are calling is unavailable".to_string()
+    }
+    fn busy(&self) {
+    }
+    fn text_received(&self, text: String) {
+    }
+}
+
+fn get_default_answerer() -> Box<dyn OnCallAnswered> {
+    Box::new(DefaultAnswerer {})
+}
+
 #[derive(Debug, Clone)]
 struct Telephone;
 impl Telephone {

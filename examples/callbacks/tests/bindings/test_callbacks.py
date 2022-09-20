@@ -39,3 +39,6 @@ cb_object2 = OnCallAnsweredImpl()
 telephone.call(domestic=True, call_responder=cb_object2)
 assert cb_object2.busy_count == 0, f"yes_count={cb_object2.busy_count} (should be 0)"
 assert cb_object2.yes_count == 1, f"yes_count={cb_object2.yes_count} (should be 1)"
+
+# And the default answerer.
+telephone.call(domestic=False, call_responder=get_default_answerer())

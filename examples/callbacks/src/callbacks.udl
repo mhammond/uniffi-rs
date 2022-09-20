@@ -1,4 +1,7 @@
-namespace callbacks {};
+namespace callbacks {
+  // Provide an OnCallAnswered that goes straight to voicemail
+  OnCallAnswered get_default_answerer();
+};
 
 interface Telephone {
   constructor();
