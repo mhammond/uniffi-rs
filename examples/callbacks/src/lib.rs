@@ -35,7 +35,9 @@ struct Telephone {
 
 impl Telephone {
     fn new() -> Self {
-        Telephone { last_sim: Mutex::new(None) }
+        Telephone {
+            last_sim: Mutex::new(None),
+        }
     }
     fn call(&self, sim: Arc<dyn SimCard>, domestic: bool, call_responder: Box<dyn OnCallAnswered>) {
         if domestic {
