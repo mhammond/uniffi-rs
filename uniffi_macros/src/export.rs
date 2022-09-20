@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
-use uniffi_meta::{checksum, FnMetadata, Metadata, MethodMetadata, Type};
+use uniffi_meta::{checksum, FnMetadata, Metadata, MethodMetadata, ObjectImplMetadata, Type};
 
 mod metadata;
 mod scaffolding;
@@ -24,7 +24,7 @@ pub enum ExportItem {
         metadata: FnMetadata,
     },
     Impl {
-        self_ident: Ident,
+        self_impl: ObjectImplMetadata,
         methods: Vec<syn::Result<Method>>,
     },
 }
@@ -50,7 +50,7 @@ pub fn expand_export(metadata: ExportItem, mod_path: &[String]) -> TokenStream {
         }
         ExportItem::Impl {
             methods,
-            self_ident,
+            self_impl,
         } => methods
             .into_iter()
             .map(|res| {
@@ -58,8 +58,9 @@ pub fn expand_export(metadata: ExportItem, mod_path: &[String]) -> TokenStream {
                     syn::Error::into_compile_error,
                     |Method { item, metadata }| {
                         let checksum = checksum(&metadata);
+                        let self_ident = format_ident!("{}", self_impl.name());
                         let scaffolding =
-                            gen_method_scaffolding(&item.sig, mod_path, checksum, &self_ident);
+                            gen_method_scaffolding(&item.sig, mod_path, checksum, &self_ident); // XXX - should push self_impl goen?
                         let meta_static_var =
                             create_metadata_static_var(&item.sig.ident, metadata.into());
 
@@ -106,8 +107,8 @@ fn fn_type_assertions(sig: &syn::Signature) -> TokenStream {
                 let value = convert_type_back(value_type);
                 quote! { ::std::collections::HashMap<#key, #value> }
             }
-            Type::ArcObject { object_name } => {
-                let object_ident = format_ident!("{object_name}");
+            Type::ArcObject { object_impl } => {
+                let object_ident = format_ident!("{}", object_impl.name());
                 quote! { ::std::sync::Arc<crate::uniffi_types::#object_ident> }
             }
         }
