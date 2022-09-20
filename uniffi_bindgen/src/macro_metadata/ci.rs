@@ -25,7 +25,7 @@ pub fn add_to_ci(
                 meta.module_path.first().unwrap(),
             ),
             Metadata::Method(meta) => (
-                format!("method `{}.{}`", meta.self_name, meta.name),
+                format!("method `{}.{}`", meta.self_impl.name(), meta.name),
                 meta.module_path.first().unwrap(),
             ),
         };

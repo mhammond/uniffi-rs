@@ -95,7 +95,7 @@ pub struct Object {
 }
 
 impl Object {
-    fn new(imp: ObjectImpl) -> Object {
+    pub fn new(imp: ObjectImpl) -> Object {
         Object {
             imp,
             constructors: Default::default(),
@@ -241,6 +241,15 @@ impl APIConverter<Object> for weedle::InterfaceDefinition<'_> {
             }
         }
         Ok(object)
+    }
+}
+
+impl From<uniffi_meta::ObjectImplMetadata> for ObjectImpl {
+    fn from(meta: uniffi_meta::ObjectImplMetadata) -> Self {
+        match meta {
+            uniffi_meta::ObjectImplMetadata::Struct(name) => ObjectImpl::Struct(name),
+            uniffi_meta::ObjectImplMetadata::Trait(name) => ObjectImpl::Trait(name),
+        }
     }
 }
 
@@ -454,7 +463,7 @@ impl From<uniffi_meta::MethodMetadata> for Method {
 
         Self {
             name: meta.name,
-            object_name: meta.self_name,
+            object_type: Some(Type::Object(meta.self_impl.into())),
             arguments,
             return_type,
             ffi_func,

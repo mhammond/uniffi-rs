@@ -517,10 +517,14 @@ impl ComponentInterface {
     }
 
     pub(super) fn add_method_definition(&mut self, meta: MethodMetadata) -> Result<()> {
-        let object = match self.objects.iter_mut().find(|o| o.name == meta.self_name) {
+        let object = match self
+            .objects
+            .iter_mut()
+            .find(|o| o.name() == meta.self_impl.name())
+        {
             Some(o) => o,
             None => {
-                self.objects.push(Object::new(meta.self_name.clone()));
+                self.objects.push(Object::new(meta.self_impl.into()));
                 self.objects.last_mut().unwrap()
             }
         };
@@ -836,7 +840,7 @@ fn convert_type(s: &uniffi_meta::Type) -> Type {
             convert_type(key_type).into(),
             convert_type(value_type).into(),
         ),
-        Ty::ArcObject { object_name } => Type::Object(object_name.clone()),
+        Ty::ArcObject { object_impl } => Type::Object(object_impl.clone().into()),
     }
 }
 

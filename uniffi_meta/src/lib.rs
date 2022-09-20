@@ -23,10 +23,26 @@ impl FnMetadata {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
+#[serde(tag = "type", content = "name")]
+pub enum ObjectImplMetadata {
+    Struct(String),
+    Trait(String),
+}
+
+impl ObjectImplMetadata {
+    pub fn name(&self) -> &String {
+        match self {
+            ObjectImplMetadata::Struct(s) => s,
+            ObjectImplMetadata::Trait(s) => s,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Hash, Deserialize, Serialize)]
 pub struct MethodMetadata {
     pub module_path: Vec<String>,
-    pub self_name: String,
+    pub self_impl: ObjectImplMetadata,
     pub name: String,
     pub inputs: Vec<FnParamMetadata>,
     pub return_type: Option<Type>,
@@ -34,7 +50,7 @@ pub struct MethodMetadata {
 
 impl MethodMetadata {
     pub fn ffi_symbol_name(&self) -> String {
-        let full_name = format!("impl_{}_{}", self.self_name, self.name);
+        let full_name = format!("impl_{}_{}", self.self_impl.name(), self.name);
         fn_ffi_symbol_name(&self.module_path, &full_name, checksum(self))
     }
 }
@@ -71,7 +87,7 @@ pub enum Type {
         value_type: Box<Type>,
     },
     ArcObject {
-        object_name: String,
+        object_impl: ObjectImplMetadata,
     },
 }
 
