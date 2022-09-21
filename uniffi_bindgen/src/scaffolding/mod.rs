@@ -44,7 +44,7 @@ mod filters {
             Type::Duration => "std::time::Duration".into(),
             Type::Enum(name) | Type::Record(name) | Type::Error(name) => format!("r#{}", name),
             Type::Object(name) => format!("std::sync::Arc<r#{}>", name),
-            Type::CallbackInterface(name) => format!("Box<dyn r#{}>", name),
+            Type::CallbackInterface(name) => format!("std::sync::Arc<dyn r#{}>", name),
             Type::Optional(t) => format!("std::option::Option<{}>", type_rs(t)?),
             Type::Sequence(t) => format!("std::vec::Vec<{}>", type_rs(t)?),
             Type::Map(k, v) => format!(

@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use std::sync::Arc;
+
 pub trait OnCallAnswered {
     fn hello(&self) -> String;
     fn busy(&self);
@@ -14,7 +16,7 @@ impl Telephone {
     fn new() -> Self {
         Telephone
     }
-    fn call(&self, domestic: bool, call_responder: Box<dyn OnCallAnswered>) {
+    fn call(&self, domestic: bool, call_responder: Arc<dyn OnCallAnswered>) {
         if domestic {
             let _ = call_responder.hello();
         } else {

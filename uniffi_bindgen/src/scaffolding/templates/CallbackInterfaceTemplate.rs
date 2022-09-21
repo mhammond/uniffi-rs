@@ -99,8 +99,8 @@ impl r#{{ trait_name }} for {{ trait_impl }} {
 }
 
 unsafe impl uniffi::FfiConverter for {{ trait_impl }} {
-    // This RustType allows for rust code that inputs this type as a Box<dyn CallbackInterfaceTrait> param
-    type RustType = Box<dyn r#{{ trait_name }}>;
+    // This RustType allows for rust code that inputs this type as an Arc<dyn CallbackInterfaceTrait> param
+    type RustType = std::sync::Arc<dyn r#{{ trait_name }}>;
     type FfiType = u64;
 
     // Lower and write are tricky to implement because we have a dyn trait as our type.  There's
@@ -121,7 +121,7 @@ unsafe impl uniffi::FfiConverter for {{ trait_impl }} {
     }
 
     fn try_lift(v: Self::FfiType) -> uniffi::deps::anyhow::Result<Self::RustType> {
-        Ok(Box::new(Self { handle: v }))
+        Ok(std::sync::Arc::new(Self { handle: v }))
     }
 
     fn try_read(buf: &mut &[u8]) -> uniffi::deps::anyhow::Result<Self::RustType> {
