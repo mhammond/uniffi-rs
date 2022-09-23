@@ -161,8 +161,8 @@ impl From<&Type> for FFIType {
             Type::String => FFIType::RustBuffer,
             // Objects are pointers to an Arc<>
             Type::Object(name) => FFIType::RustArcPtr(name.to_owned()),
-            // Callback interfaces are passed as opaque integer handles.
-            Type::CallbackInterface(_) => FFIType::UInt64,
+            // Callback interfaces are NOT! passed as opaque integer handles.
+            Type::CallbackInterface(name) => FFIType::RustArcPtr(name.to_owned()),
             // Other types are serialized into a bytebuffer and deserialized on the other side.
             Type::Enum(_)
             | Type::Error(_)

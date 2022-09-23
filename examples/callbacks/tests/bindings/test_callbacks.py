@@ -41,4 +41,5 @@ assert cb_object2.busy_count == 0, f"yes_count={cb_object2.busy_count} (should b
 assert cb_object2.yes_count == 1, f"yes_count={cb_object2.yes_count} (should be 1)"
 
 # And the default answerer.
+default_answerer = get_default_answerer()
 telephone.call(domestic=False, call_responder=get_default_answerer())

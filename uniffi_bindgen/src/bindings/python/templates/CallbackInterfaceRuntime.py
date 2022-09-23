@@ -7,24 +7,23 @@ class ConcurrentHandleMap:
 
     def __init__(self):
         # type Handle = int
-        self._left_map = {}  # type: Dict[Handle, Any]
-        self._right_map = {}  # type: Dict[Any, Handle]
+        self._left_map = {}  # type: Dict[Handle, (Any, ctypes.c_void_p)]
+        self._right_map = {}  # type: Dict[Any, (Handle, ctypes.c_void_p)]
 
         self._lock = threading.Lock()
-        self._current_handle = 0
-        self._stride = 1
 
 
-    def insert(self, obj):
+    def insert(self, obj, arc_maker):
         with self._lock:
             if obj in self._right_map:
                 return self._right_map[obj]
             else:
                 handle = self._current_handle
                 self._current_handle += self._stride
-                self._left_map[handle] = obj
-                self._right_map[obj] = handle
-                return handle
+                arc = arc_maker(handle)
+                self._left_map[handle] = (obj, arc)
+                self._right_map[obj] = (handle, arc)
+                return arc
 
     def get(self, handle):
         with self._lock:
@@ -33,7 +32,7 @@ class ConcurrentHandleMap:
     def remove(self, handle):
         with self._lock:
             if handle in self._left_map:
-                obj = self._left_map.pop(handle)
+                (obj, arc) = self._left_map.pop(handle)
                 del self._right_map[obj]
                 return obj
 
@@ -44,15 +43,16 @@ IDX_CALLBACK_FREE = 0
 class FfiConverterCallbackInterface:
     _handle_map = ConcurrentHandleMap()
 
-    def __init__(self, cb):
+    def __init__(self, cb, arc_maker):
         self._foreign_callback = cb
+        self._arc_maker = arc_maker
 
     def drop(self, handle):
         self.__class__._handle_map.remove(handle)
 
     @classmethod
-    def lift(cls, handle):
-        obj = cls._handle_map.get(handle)
+    def lift(cls, arc):
+        obj = cls._handle_map.get(handle)[0]
         if not obj:
             raise InternalError("The object in the handle map has been dropped already")
 
@@ -65,8 +65,8 @@ class FfiConverterCallbackInterface:
 
     @classmethod
     def lower(cls, cb):
-        handle = cls._handle_map.insert(cb)
-        return handle
+        arc = cls._handle_map.insert(cb, self._arc_maker)
+        return arc
 
     @classmethod
     def write(cls, cb, buf):

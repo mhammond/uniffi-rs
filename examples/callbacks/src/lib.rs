@@ -18,12 +18,12 @@ impl OnCallAnswered for DefaultAnswerer {
     }
     fn busy(&self) {
     }
-    fn text_received(&self, text: String) {
+    fn text_received(&self, _text: String) {
     }
 }
 
-fn get_default_answerer() -> Box<dyn OnCallAnswered> {
-    Box::new(DefaultAnswerer {})
+fn get_default_answerer() -> Arc<dyn OnCallAnswered> {
+    Arc::new(DefaultAnswerer {})
 }
 
 #[derive(Debug, Clone)]

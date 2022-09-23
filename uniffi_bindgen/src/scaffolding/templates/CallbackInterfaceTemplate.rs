@@ -98,10 +98,11 @@ impl r#{{ trait_name }} for {{ trait_impl }} {
     {%- endfor %}
 }
 
-unsafe impl uniffi::FfiConverter for {{ trait_impl }} {
+// The goal is to get this generic enough that we can remove it!
+unsafe impl uniffi::FfiConverter for r#{{ trait_impl }} {
     // This RustType allows for rust code that inputs this type as an Arc<dyn CallbackInterfaceTrait> param
     type RustType = std::sync::Arc<dyn r#{{ trait_name }}>;
-    type FfiType = u64;
+    type FfiType = *const std::os::raw::c_void;
 
     // Lower and write are tricky to implement because we have a dyn trait as our type.  There's
     // probably a way to, but this carries lots of thread safety risks, down to impedence
@@ -121,7 +122,11 @@ unsafe impl uniffi::FfiConverter for {{ trait_impl }} {
     }
 
     fn try_lift(v: Self::FfiType) -> uniffi::deps::anyhow::Result<Self::RustType> {
-        Ok(std::sync::Arc::new(Self { handle: v }))
+        // The foreign side supplied a pointer, but we don't own it - Box::leak gives us the value.
+        // XXX - but how do we convince the foreign code to wrap their ptr in an Arc<>
+        let foreign_arc = Box::leak(unsafe { Box::from_raw(v as *mut std::sync::Arc<r#{{ trait_name }}>) });
+        // Take a clone for our own use.
+        Ok(std::sync::Arc::clone(foreign_arc))
     }
 
     fn try_read(buf: &mut &[u8]) -> uniffi::deps::anyhow::Result<Self::RustType> {
