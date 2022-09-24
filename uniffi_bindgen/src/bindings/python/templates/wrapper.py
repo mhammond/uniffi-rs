@@ -59,6 +59,11 @@ __all__ = [
     {%- endfor %}
     {%- for obj in ci.object_definitions() %}
     "{{ obj|type_name }}",
+    {%- match obj.foreign_impl_name() %}
+    {%- when Some(name) %}
+    "{{ name }}",
+    {%- else %}
+    {%- endmatch %}
     {%- endfor %}
     {%- for e in ci.error_definitions() %}
     "{{ e|type_name }}",

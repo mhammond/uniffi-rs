@@ -50,3 +50,13 @@ print("The last call was made on the SIM card", cb_object2.last_sim.name())
 cb_object2.last_sim = None
 print("Rust thinks the last call was made on the SIM card", telephone.get_last_sim().name())
 
+try:
+    SimCardTrait
+except NameError:
+    print("Looks like we haven't got foreign support for traits here!?")
+else:
+    class PythonSimCard(SimCardTrait):
+        def name(self):
+            return "python"
+
+    telephone.call(PythonSimCard(), domestic=True, call_responder=cb_object2)

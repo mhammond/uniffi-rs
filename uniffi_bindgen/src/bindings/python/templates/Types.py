@@ -65,12 +65,13 @@
 {%- let name = imp.id() %}
 
 {%- include "ObjectTemplate.py" %}
-{#
 {%- let obj = ci.get_object_definition(name).unwrap() %}
-{%- if obj.is_trait() -%}
+{%- match obj.foreign_impl_name() %}
+{%- when Some(name) %}
+{%- let foreign_impl_name = name %}
 {%- include "CallbackInterfaceTraitTemplate.py" %}
-{%- endif -%}
-#}
+{%- else %}
+{%- endmatch %}
 
 {%- when Type::Timestamp %}
 {%- include "TimestampHelper.py" %}

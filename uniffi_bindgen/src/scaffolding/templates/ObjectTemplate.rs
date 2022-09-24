@@ -63,3 +63,86 @@ pub extern "C" fn {{ ffi_free.name() }}(ptr: *const std::os::raw::c_void, call_s
         {% call rs::to_rs_method_call(obj, meth) %}
     }
 {% endfor %}
+
+{% if obj.is_trait() -%}
+// Objects which describe traits are able to be implemented by foreign bindings.
+// So we implement a struct implementing the trait to enable this.
+// XXX - we should make this conditional? Not all traits actually need that.
+{% let foreign_callback_internals = format!("foreign_callback_{}_internals", obj.name())|upper -%}
+
+// Register a foreign callback for getting across the FFI.
+#[doc(hidden)]
+static {{ foreign_callback_internals }}: uniffi::ForeignCallbackInternals = uniffi::ForeignCallbackInternals::new();
+
+#[doc(hidden)]
+#[no_mangle]
+pub extern "C" fn {{ obj.ffi_init_callback().name() }}(callback: uniffi::ForeignCallback, _: &mut uniffi::RustCallStatus) {
+    {{ foreign_callback_internals }}.set_callback(callback);
+    // The call status should be initialized to CALL_SUCCESS, so no need to modify it.
+}
+
+#[doc(hidden)]
+#[derive(Debug)]
+struct Foreign{{ obj.type_name() }} {
+    handle: u64 
+}
+
+
+impl r#{{ obj.type_name() }} for Foreign{{ obj.type_name() }} {
+    {%- for meth in obj.methods() %}
+
+    {#- Method declaration #}
+    fn r#{{ meth.name() -}}
+    ({% call rs::arg_list_decl_with_prefix("&self", meth) %})
+    {%- match meth.return_type() %}
+    {%- when Some with (return_type) %} -> {{ return_type.borrow()|type_rs }}
+    {% else -%}
+    {%- endmatch -%} {
+    {#- Method body #}
+        uniffi::deps::log::debug!("{{ obj.name() }}.{{ meth.name() }}");
+
+    {#- Packing args into a RustBuffer #}
+        {% if meth.arguments().len() == 0 -%}
+        let args_buf = Vec::new();
+        {% else -%}
+        let mut args_buf = Vec::new();
+        {% endif -%}
+        {%- for arg in meth.arguments() %}
+        {{ arg.type_().borrow()|ffi_converter }}::write(r#{{ arg.name() }}, &mut args_buf);
+        {%- endfor -%}
+        let args_rbuf = uniffi::RustBuffer::from_vec(args_buf);
+
+    {#- Calling into foreign code. #}
+        let callback = {{ foreign_callback_internals }}.get_callback().unwrap();
+
+        let ret_rbuf = unsafe {
+            // SAFETY:
+            // * We're passing in a pointer to an empty buffer.
+            //   * Nothing allocated, so nothing to drop.
+            // * We expect the callback to write into that a valid allocated instance of a
+            //   RustBuffer.
+            // * A positive return value signals success.
+            let mut ret_rbuf = uniffi::RustBuffer::new();
+            let ret = callback(self.handle, {{ loop.index }}, args_rbuf, &mut ret_rbuf);
+            match ret {
+                0 => uniffi::RustBuffer::new(),
+                _ if ret < 0 => panic!("Callback failed"),
+                _ => ret_rbuf
+            }
+        };
+
+    {#- Unpacking the RustBuffer to return to Rust #}
+        {% match meth.return_type() -%}
+        {% when Some with (return_type) -%}
+        let vec = ret_rbuf.destroy_into_vec();
+        let mut ret_buf = vec.as_slice();
+        {{ return_type|ffi_converter }}::try_read(&mut ret_buf).unwrap()
+        {%- else -%}
+        uniffi::RustBuffer::destroy(ret_rbuf);
+        {%- endmatch %}
+    }
+    {%- endfor %}
+}
+
+
+{%- endif -%}

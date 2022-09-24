@@ -71,4 +71,14 @@ class {{ ffi_converter_name }}:
 
     @staticmethod
     def lower(value):
+        {%- match obj.foreign_impl_name() %}
+        {%- when Some(name) %}
+        {%- let ffi_converter_name_trait = format!("{}Trait", ffi_converter_name) %}
+        # If the instance we have is a Python implemented version, convert it to a Rust version.
+        if isinstance(value, {{ name }}):
+            value = {{ ffi_converter_name_trait }}.lift({{ ffi_converter_name_trait }}.lower(value))
+        {%- else %}
+        {%- endmatch %}
+        if not isinstance(value, {{ type_name }}):
+            raise TypeError("Expected {{ type_name }} instance, {} found".format(value.__class__.__name__))
         return value._pointer

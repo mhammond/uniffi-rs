@@ -92,6 +92,9 @@ pub struct Object {
     pub(super) constructors: Vec<Constructor>,
     pub(super) methods: Vec<Method>,
     pub(super) ffi_func_free: FFIFunction,
+    // If the object describes a trait which can be implemented by foreign bindings, this
+    // is the callback init function for the object.
+    pub(super) ffi_init_callback: FFIFunction,
 }
 
 impl Object {
@@ -101,6 +104,7 @@ impl Object {
             constructors: Default::default(),
             methods: Default::default(),
             ffi_func_free: Default::default(),
+            ffi_init_callback: Default::default(),
         }
     }
 
@@ -110,6 +114,14 @@ impl Object {
 
     pub fn is_trait(&self) -> bool {
         matches!(self.imp, ObjectImpl::Trait(_))
+    }
+
+    // Should we generate support for a foreign implementation of this trait?
+    pub fn foreign_impl_name(&self) -> Option<String> {
+        match &self.imp {
+            ObjectImpl::Struct(_) => None,
+            ObjectImpl::Trait(id) => Some(format!("{id}Trait")),
+        }
     }
 
     pub fn type_name(&self) -> String {
@@ -153,6 +165,11 @@ impl Object {
         &self.ffi_func_free
     }
 
+    pub fn ffi_init_callback(&self) -> &FFIFunction {
+        assert!(self.is_trait()); // only makes sense for traits
+        &self.ffi_init_callback
+    }
+
     pub fn iter_ffi_function_definitions(&self) -> impl Iterator<Item = &FFIFunction> {
         iter::once(&self.ffi_func_free)
             .chain(self.constructors.iter().map(|f| &f.ffi_func))
@@ -173,6 +190,13 @@ impl Object {
         for meth in self.methods.iter_mut() {
             meth.derive_ffi_func(ci_prefix, name)?
         }
+        // And support for traits as callbacks.
+        self.ffi_init_callback.name = format!("ffi_{ci_prefix}_{}_init_callback", self.name());
+        self.ffi_init_callback.arguments = vec![FFIArgument {
+            name: "callback_stub".to_string(),
+            type_: FFIType::ForeignCallback,
+        }];
+        self.ffi_init_callback.return_type = None;
         Ok(())
     }
 

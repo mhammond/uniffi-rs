@@ -1,14 +1,18 @@
-{#- XXX - this is just a copy/paste of CallbackInterfaceTemplate.py and should be rolled into that. -#}
+{# This started as a clone of CallbackInterfaceTemplate.py but has distinct differences due to how callbacks and traits are implemented - todo - flesh this out. #}
 {#- It takes an Object `Trait` impl and generates a callback interface for it, but with a different name -#}
 
-{%- obj = ci.get_object_definition(name).unwrap() %}
-{%- let foreign_callback = format!("foreignCallback{}", canonical_type_name) %}
+{%- let cbi = obj -%}
 
-{% if self.include_once_check("CallbackInterfaceRuntime.py") %}{% include "CallbackInterfaceRuntime.py" %}{% endif %}
+{%- let ffi_converter_name = format!("{}Trait", ffi_converter_name) %}
+{%- let canonical_type_name = format!("{}Trait", canonical_type_name) %}
+
+{%- let foreign_callback = format!("foreignCallback{}", canonical_type_name) %}
 
 # Declaration and FfiConverters for {{ type_name }} trait
 
-class {{ type_name }}Trait:
+{% if self.include_once_check("CallbackInterfaceRuntime.py") %}{% include "CallbackInterfaceRuntime.py" %}{% endif %}
+
+class {{ foreign_impl_name }}:
     {% for meth in cbi.methods() -%}
     def {{ meth.name()|fn_name }}({% call py::arg_list_decl(meth) %}):
         raise NotImplementedError
