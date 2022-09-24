@@ -144,5 +144,13 @@ impl r#{{ obj.type_name() }} for Foreign{{ obj.type_name() }} {
     {%- endfor %}
 }
 
+// A function for making one of our impls
+#[doc(hidden)]
+#[no_mangle]
+pub extern "C" fn {{ obj.ffi_object_new().name() }}(handle: u64) -> *const std::os::raw::c_void {
+    let new = Foreign{{ obj.type_name() }} { handle };
+    let arc = std::sync::Arc::new(new);
+    {{ obj.type_().borrow()|ffi_converter }}::lower(arc)
+}
 
 {%- endif -%}

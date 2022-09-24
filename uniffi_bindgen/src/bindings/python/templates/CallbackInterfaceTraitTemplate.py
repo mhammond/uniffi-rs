@@ -85,5 +85,5 @@ def py_{{ foreign_callback }}(handle, method, args, buf_ptr):
 {{ foreign_callback }} = FOREIGN_CALLBACK_T(py_{{ foreign_callback }})
 
 # The FfiConverter which transforms the Callbacks in to Handles to pass to Rust.
-rust_call(lambda err: _UniFFILib.{{ cbi.ffi_init_callback().name() }}({{ foreign_callback }}, err))
-{{ ffi_converter_name }} = FfiConverterCallbackInterface({{ foreign_callback }})
+#rust_call(lambda err: _UniFFILib.{{ cbi.ffi_init_callback().name() }}({{ foreign_callback }}, err))
+#{{ ffi_converter_name }} = FfiConverterCallbackInterface({{ foreign_callback }})

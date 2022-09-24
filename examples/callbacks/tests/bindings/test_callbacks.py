@@ -59,4 +59,6 @@ else:
         def name(self):
             return "python"
 
+    # crashing here, but it seems like *after* rust correctly receives the object!
     telephone.call(PythonSimCard(), domestic=True, call_responder=cb_object2)
+    print("made call")

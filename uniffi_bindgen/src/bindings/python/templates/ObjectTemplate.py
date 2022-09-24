@@ -50,6 +50,23 @@ class {{ type_name }}(object):
     {% endmatch %}
     {% endfor %}
 
+{%- match obj.foreign_impl_name() %}
+{%- when Some(name) %}
+{% if self.include_once_check("CallbackInterfaceRuntime.py") %}{% include "CallbackInterfaceRuntime.py" %}{% endif %}
+{%- let ffi_converter_name_trait = format!("{}Trait", ffi_converter_name) %}
+# The handle map to manage Python implemented traits
+{{ ffi_converter_name_trait }}HandleMap = ConcurrentHandleMap()
+
+# This is very hacky!
+# * probably should use RustCallStatus?
+# * should use iter_ffi_function_definitions to get them automatically emitted.
+_UniFFILib.{{ obj.ffi_object_new().name()}}.argtypes = (
+    ctypes.c_uint64,
+)
+_UniFFILib.{{ obj.ffi_object_new().name()}}.restype = ctypes.c_void_p
+
+{%- else %}
+{%- endmatch %}
 
 class {{ ffi_converter_name }}:
     @classmethod
@@ -76,7 +93,10 @@ class {{ ffi_converter_name }}:
         {%- let ffi_converter_name_trait = format!("{}Trait", ffi_converter_name) %}
         # If the instance we have is a Python implemented version, convert it to a Rust version.
         if isinstance(value, {{ name }}):
-            value = {{ ffi_converter_name_trait }}.lift({{ ffi_converter_name_trait }}.lower(value))
+            handle = {{ ffi_converter_name_trait }}HandleMap.insert(value)
+            pointer = _UniFFILib.{{ obj.ffi_object_new().name()}}(handle)
+            value = {{ type_name }}._make_instance_(pointer)
+            print("Python -> Rust conversion of type got:", value, hex(value._pointer))
         {%- else %}
         {%- endmatch %}
         if not isinstance(value, {{ type_name }}):
