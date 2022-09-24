@@ -47,6 +47,7 @@ mod filters {
                 ObjectImpl::Struct(name) => format!("std::sync::Arc<r#{}>", name),
                 ObjectImpl::Trait(name) => format!("std::sync::Arc<dyn r#{}>", name),
             },
+            // Should we combine this?
             Type::CallbackInterface(name) => format!("Box<dyn r#{}>", name),
             Type::Optional(t) => format!("std::option::Option<{}>", type_rs(t)?),
             Type::Sequence(t) => format!("std::vec::Vec<{}>", type_rs(t)?),

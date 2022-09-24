@@ -29,6 +29,24 @@ pub trait OnCallAnswered {
     fn text_received(&self, sim: Arc<dyn SimCard>, text: String);
 }
 
+struct DefaultAnswerer {
+    texts: Mutex<Vec<String>>,
+}
+impl OnCallAnswered for DefaultAnswerer {
+    fn hello(&self, sim: Arc<dyn SimCard>) -> String {
+        "The person you are calling is unavailable".to_string()
+    }
+    fn busy(&self, sim: Arc<dyn SimCard>) {
+    }
+    fn text_received(&self, sim: Arc<dyn SimCard>, text: String) {
+        self.texts.lock().unwrap().push(text);
+    }
+}
+
+// fn get_default_answerer() -> Arc<dyn OnCallAnswered> {
+//     Arc::new(DefaultAnswerer { texts: Mutex::new(Vec::new()) })
+// }
+
 struct Telephone {
     last_sim: Mutex<Option<Arc<dyn SimCard>>>,
 }

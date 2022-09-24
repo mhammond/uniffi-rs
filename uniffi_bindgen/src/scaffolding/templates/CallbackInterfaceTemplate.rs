@@ -99,7 +99,7 @@ impl r#{{ trait_name }} for {{ trait_impl }} {
 }
 
 unsafe impl uniffi::FfiConverter for {{ trait_impl }} {
-    // This RustType allows for rust code that inputs this type as a Box<dyn CallbackInterfaceTrait> param
+    // This RustType allows for rust code that inputs this type as a Arc<dyn CallbackInterfaceTrait> param
     type RustType = Box<dyn r#{{ trait_name }}>;
     type FfiType = u64;
 
