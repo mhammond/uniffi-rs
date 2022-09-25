@@ -48,10 +48,7 @@ pub fn expand_export(metadata: ExportItem, mod_path: &[String]) -> TokenStream {
                 #meta_static_var
             }
         }
-        ExportItem::Impl {
-            methods,
-            self_impl,
-        } => methods
+        ExportItem::Impl { methods, self_impl } => methods
             .into_iter()
             .map(|res| {
                 res.map_or_else(

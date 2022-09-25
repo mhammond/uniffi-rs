@@ -43,10 +43,7 @@ pub(super) fn gen_impl_metadata(
         .map(|it| gen_method_metadata(it, &self_impl, mod_path))
         .collect();
 
-    Ok(ExportItem::Impl {
-        methods,
-        self_impl,
-    })
+    Ok(ExportItem::Impl { methods, self_impl })
 }
 
 fn gen_method_metadata(

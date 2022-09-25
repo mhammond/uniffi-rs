@@ -3,6 +3,7 @@ namespace callbacks {
   sequence<SimCard> get_sim_cards();
   // And I can provide an OnCallAnswered that goes straight to voicemail
 //  OnCallAnswered get_default_answerer();
+  SimCard rt_sim(SimCard sim);
 };
 
 // This is a trait implemented on the Rust side.

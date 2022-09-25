@@ -112,11 +112,13 @@ fn convert_generic_type1(ident: &Ident, arg: &syn::GenericArgument) -> syn::Resu
     match ident.to_string().as_str() {
         "Arc" => Ok(Type::ArcObject {
             // XXX - how to know if this is a trait or type?
-            object_impl: ObjectImplMetadata::Struct(type_as_type_path(arg)?
-                .path
-                .get_ident()
-                .ok_or_else(|| type_not_supported(arg))?
-                .to_string()),
+            object_impl: ObjectImplMetadata::Struct(
+                type_as_type_path(arg)?
+                    .path
+                    .get_ident()
+                    .ok_or_else(|| type_not_supported(arg))?
+                    .to_string(),
+            ),
         }),
         "Option" => Ok(Type::Option {
             inner_type: convert_type(arg)?.into(),

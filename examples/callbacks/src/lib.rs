@@ -5,10 +5,11 @@
 use std::sync::{Arc, Mutex};
 
 // SIM cards.
-pub trait SimCard: Send + Sync {
+pub trait SimCard: Send + Sync + std::fmt::Debug {
     fn name(&self) -> String;
 }
 
+#[derive(Debug)]
 struct RustySim {}
 impl SimCard for RustySim {
     fn name(&self) -> String {
@@ -36,8 +37,7 @@ impl OnCallAnswered for DefaultAnswerer {
     fn hello(&self, sim: Arc<dyn SimCard>) -> String {
         "The person you are calling is unavailable".to_string()
     }
-    fn busy(&self, sim: Arc<dyn SimCard>) {
-    }
+    fn busy(&self, sim: Arc<dyn SimCard>) {}
     fn text_received(&self, sim: Arc<dyn SimCard>, text: String) {
         self.texts.lock().unwrap().push(text);
     }
@@ -71,4 +71,8 @@ impl Telephone {
     }
 }
 
+// for debugging, just roundtrip a SimCard.
+fn rt_sim(sim: Arc<dyn SimCard>) -> Arc<dyn SimCard> {
+    sim
+}
 include!(concat!(env!("OUT_DIR"), "/callbacks.uniffi.rs"));

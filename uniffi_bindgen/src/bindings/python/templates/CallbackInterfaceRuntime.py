@@ -1,5 +1,6 @@
 import threading
 
+# Used for callbacks
 class ConcurrentHandleMap:
     """
     A map where inserting, getting and removing data is synchronized with a lock.
@@ -35,6 +36,48 @@ class ConcurrentHandleMap:
             if handle in self._left_map:
                 obj = self._left_map.pop(handle)
                 del self._right_map[obj]
+                return obj
+
+# Used for foreign traits
+class ConcurrentArcMap:
+    """
+    A map where inserting, getting and removing data is synchronized with a lock.
+    """
+
+    def __init__(self):
+        # type Handle = int
+        self._left_map = {}  # type: Dict[Handle, Any]
+        self._rust_inst_map = {}  # type: Dict[RustInst, Any]
+        self._right_map = {}  # type: Dict[Any, Handle]
+
+        self._lock = threading.Lock()
+        self._current_handle = 0
+        self._stride = 1
+
+
+    def insert(self, obj, inst_getter):
+        with self._lock:
+            if obj in self._rust_inst_map:
+                return self._rust_inst_map[obj]
+            else:
+                handle = self._current_handle
+                self._current_handle += self._stride
+                self._left_map[handle] = obj
+                self._right_map[obj] = handle
+                inst = inst_getter(handle)
+                self._rust_inst_map[obj] = inst
+                return inst
+
+    def get_ob_for_handle(self, handle):
+        with self._lock:
+            return self._left_map.get(handle)
+
+    def remove(self, handle):
+        with self._lock:
+            if handle in self._left_map:
+                obj = self._left_map.pop(handle)
+                del self._right_map[obj]
+                del self._rust_inst_map[obj]
                 return obj
 
 # Magic number for the Rust proxy to call using the same mechanism as every other method,

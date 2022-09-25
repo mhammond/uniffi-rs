@@ -87,6 +87,13 @@ struct Foreign{{ obj.type_name() }} {
     handle: u64 
 }
 
+impl Drop for Foreign{{ obj.type_name() }} {
+    fn drop(&mut self) {
+        println!("FOREIGN drop");
+        panic!();
+    }
+}
+
 
 impl r#{{ obj.type_name() }} for Foreign{{ obj.type_name() }} {
     {%- for meth in obj.methods() %}

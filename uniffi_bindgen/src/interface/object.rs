@@ -183,7 +183,6 @@ impl Object {
             .chain(self.constructors.iter().map(|f| &f.ffi_func))
             .chain(self.methods.iter().map(|f| &f.ffi_func))
         //    .chain([&self.ffi_func_new, &self.ffi_init_callback].into_iter())
-
     }
 
     pub fn derive_ffi_funcs(&mut self, ci_prefix: &str) -> Result<()> {

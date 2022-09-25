@@ -524,7 +524,8 @@ impl ComponentInterface {
         {
             Some(o) => o,
             None => {
-                self.objects.push(Object::new(meta.self_impl.clone().into()));
+                self.objects
+                    .push(Object::new(meta.self_impl.clone().into()));
                 self.objects.last_mut().unwrap()
             }
         };
