@@ -69,7 +69,7 @@
 {%- match obj.foreign_impl_name() %}
 {%- when Some(name) %}
 {%- let foreign_impl_name = name %}
-{%- include "CallbackInterfaceTraitTemplate.py" %}
+{%- include "ObjectTraitCallbackTemplate.py" %}
 {%- else %}
 {%- endmatch %}
 
