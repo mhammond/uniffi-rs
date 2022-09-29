@@ -632,15 +632,20 @@ unsafe impl<T: Sync + Send> FfiConverter for std::sync::Arc<T> {
 /// Support for passing reference-counted trait objects via the FFI.
 ///
 /// This is different than the last one, since trait objects are stored as 2 pointers (AKA a "fat
-/// pointer): one for `T` and another for the vtable.  Since the foreign side is expecting
-/// a single pointer, something needs to get wrapped in a Box. And all our `T`s are `Arc<>`s.
-/// So, of `Box<Arc<T>` or `Arc<Box<T>`, an inner `Arc<T>` is more consistent with other impls.
+/// pointer): one for `T` and another for the vtable - even inside a Box or an Arc
+/// (ie, `size_of::<Arc<dyn T>>()` and `size_of::<Box<dyn T>>()` are both 16 when
+/// size_of::<Arc<Box<dyn T>>>() is 8).
+/// Of `Box<Arc<T>` or `Arc<Box<T>`, an inner `Arc<T>` is more consistent
+/// with our other implementations and allows us to hide the Box - the Rust
+/// code being UniFFId can just deal with `Arc<dyn T>` and the Box is a
+/// hidden implementation detail.
+/// XXX - are we sure this doesn't leak?
 unsafe impl<T: Sync + Send + ?Sized> FfiConverter for Box<std::sync::Arc<T>> {
     type RustType = std::sync::Arc<T>;
     // Don't use a pointer to <T> as that requires a `pub <T>`
     type FfiType = *const std::os::raw::c_void;
 
-    /// When lowering, we have an owned `Arc<T>` and we transfer that ownership
+    /// When lowering, we have an owned `Arc<T>` which we box, then transfer
     /// to the foreign-language code, "leaking" it out of Rust's ownership system
     /// as a raw pointer. This works safely because we have unique ownership of `self`.
     /// The foreign-language code is responsible for freeing this by calling the
