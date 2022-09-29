@@ -61,5 +61,5 @@ print("Round-tripped sim with name", sim.name())
 telephone.call(sim, domestic=True, call_responder=cb_object2)
 
 print("The last call was made on the SIM card", cb_object2.last_sim.name())
-# uncomment this to panic on a todo for freeing!
-#   cb_object2.last_sim = None
+# explicitly get rust to drop it's reference to us just to see if we crash!
+cb_object2.last_sim = None

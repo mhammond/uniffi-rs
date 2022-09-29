@@ -27,9 +27,9 @@ pub extern "C" fn {{ ffi_free.name() }}(ptr: *const std::os::raw::c_void, call_s
     uniffi::call_with_output(call_status, || {
         assert!(!ptr.is_null());
         {% if obj.is_trait() -%}
-        {#- traits are lowered as a Box<T> -#}
+        {#- traits are lowered as a Box<Arc<T>> -#}
         // XXX - not sure this is correct.
-        drop(unsafe { Box::from_raw(ptr as *mut Box<dyn r#{{ obj.type_name() }}>) })
+        drop(unsafe { Box::from_raw(ptr as *mut Arc<dyn r#{{ obj.type_name() }}>) })
         {%- else -%}
         {#- turn it into an Arc and explicitly drop it. #}
         drop(unsafe { std::sync::Arc::from_raw(ptr as *const r#{{ obj.type_name() }}) })
@@ -86,14 +86,6 @@ pub extern "C" fn {{ obj.ffi_init_callback().name() }}(callback: uniffi::Foreign
 struct Foreign{{ obj.type_name() }} {
     handle: u64 
 }
-
-impl Drop for Foreign{{ obj.type_name() }} {
-    fn drop(&mut self) {
-        println!("FOREIGN drop");
-        panic!();
-    }
-}
-
 
 impl r#{{ obj.type_name() }} for Foreign{{ obj.type_name() }} {
     {%- for meth in obj.methods() %}

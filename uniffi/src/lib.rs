@@ -639,7 +639,7 @@ unsafe impl<T: Sync + Send> FfiConverter for std::sync::Arc<T> {
 /// with our other implementations and allows us to hide the Box - the Rust
 /// code being UniFFId can just deal with `Arc<dyn T>` and the Box is a
 /// hidden implementation detail.
-/// XXX - are we sure this doesn't leak?
+/// XXX - BUT - this leaks. So it might be necessary to move back to Arc<Box<T>>?
 unsafe impl<T: Sync + Send + ?Sized> FfiConverter for Box<std::sync::Arc<T>> {
     type RustType = std::sync::Arc<T>;
     // Don't use a pointer to <T> as that requires a `pub <T>`

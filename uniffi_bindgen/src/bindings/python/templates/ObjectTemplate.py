@@ -104,15 +104,6 @@ def py_{{ foreign_callback }}(handle, method, args, buf_ptr):
     if not cb:
         raise InternalError("No callback in handlemap; this is a Uniffi bug")
 
-    if method == IDX_CALLBACK_FREE:
-        # XXXXXX - drop it from the map with explicit drop of the arc?
-        print("TODO: Free!")
-#        {{ ffi_converter_name }}.drop(handle)
-        # No return value.
-        # See docs of ForeignCallback in `uniffi/src/ffi/foreigncallbacks.rs`
-        return 0
-
-
     {% for meth in obj.methods() -%}
     {% let method_name = format!("invoke_{}", meth.name())|fn_name -%}
     if method == {{ loop.index }}:
