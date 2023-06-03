@@ -4,7 +4,11 @@
 
 {% include "Protocol.py" %}
 
-class {{ impl_name }}:
+{% if ci.is_name_used_as_error(name) %}
+class {{ type_name }}(Exception):
+{%- else %}
+class {{ type_name }}:
+{%- endif %}
     _pointer: ctypes.c_void_p
 
 {%- match obj.primary_constructor() %}
@@ -42,8 +46,7 @@ class {{ impl_name }}:
 
 {%- for meth in obj.methods() -%}
     {%- call py::method_decl(meth.name()|fn_name, meth) %}
-{% endfor %}
-
+{%- endfor %}
 {%- for tm in obj.uniffi_traits() -%}
 {%-     match tm %}
 {%-         when UniffiTrait::Debug { fmt } %}
@@ -64,14 +67,40 @@ class {{ impl_name }}:
         return {{ ne.return_type().unwrap()|lift_fn }}({% call py::to_ffi_call_with_prefix("self._pointer", ne) %})
 {%-         when UniffiTrait::Hash { hash } %}
             {%- call py::method_decl("__hash__", hash) %}
-{%      endmatch %}
-{% endfor %}
+{%-      endmatch %}
+{%- endfor %}
 
+{# Foreign traits and callback support #}
 {%- if obj.is_trait_interface() %}
 {%- let callback_handler_class = format!("UniffiCallbackInterface{}", name) %}
 {%- let callback_handler_obj = format!("uniffiCallbackInterface{}", name) %}
 {%- let ffi_init_callback = obj.ffi_init_callback() %}
 {% include "CallbackInterfaceImpl.py" %}
+{%- endif %}
+
+{# Objects as error #}
+{%- if ci.is_name_used_as_error(name) %}
+{# Due to some mismatches in the ffi converter mechanisms, errors are forced to be a RustBuffer #}
+class {{ ffi_converter_name }}__as_error(_UniffiConverterRustBuffer):
+    @classmethod
+    def read(cls, buf):
+        raise NotImplementedError()
+
+    @classmethod
+    def write(cls, value, buf):
+        raise NotImplementedError()
+
+    @staticmethod
+    def lift(value):
+        # Errors are always a rust buffer; read a pointer.
+        with value.consume_with_stream() as stream:
+            ptr = stream.read_u64()
+            return {{ ffi_converter_name }}.lift(ptr)
+
+    @staticmethod
+    def lower(value):
+        raise NotImplementedError()
+
 {%- endif %}
 
 class {{ ffi_converter_name }}:
