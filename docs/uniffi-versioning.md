@@ -20,6 +20,33 @@ Crates that use UniFFI to generate scaffolding or bindings should only have a di
 
 Because the crates only directly depend on `uniffi`, they only need to care about the `uniffi` version and can ignore the versions of sub-dependencies.  This means that breaking changes in `uniffi_bindgen` won't be a breaking change for consumers, as long as it doesn't affect the functionality listed above.
 
+## How binding generators should depend on UniFFI
+
+Crates that use uniffi_bindgen to implement bindings for 3rd party languages should always have
+a direct dependency to a specific uniffi-bindgen version. This version will be incremented to
+indicate a breaking change whenever the implementation of bindings might need to change, even if
+these changes would not be noticed by the user (ie, even when we did not bump the major "uniffi"
+version.)
+
+Unfortunately, this might well mean that in some cases the users of some bindings might be
+unable to update to what the UniFFI project considers a minor (ie, non breaking) change.
+For example:
+
+* UniFFI version X ships with uniffi_bindgen version Y
+* UniFFI implements internal changes to uniffi_bindgen - nothing which changes the FFI or how types
+  are named, but enough that binding generators require some work to be compatible.
+* The next UniFFI release is likely ship with trhe version for `uniffi` indicating a semver compatible
+  change to that crate, but a semver breaking change for `uniffi_bindgen`
+
+The end result is that:
+* Most users depend only on the top-level `uniffi` version, so see a semver compatible change.
+* Users who depends on 3rd party bindings will find that those bindings declare they need
+  uniffi_bindgen version Y - but the new release comes with a semver incompatible version.
+* Users find themselves unable to update UniFFI to what appears to be semver compatible version.
+
+Note that this behaviour is a feature of how we are using versioning.
+
+
 ## What is a breaking change?
 
 To expand on the previous point, here are the scenarios where `uniffi` should get a breaking version bump:
@@ -32,6 +59,7 @@ To expand on the previous point, here are the scenarios where `uniffi` should ge
   * Changing how FFI functions are named.
   * Changing how FFI functions are called
   * Changing how types are represented.
+(XXX - is the above correct? Shouldn't that just be the bindgen version? See comments above?)
 
 ## How to handle breaking changes
 
