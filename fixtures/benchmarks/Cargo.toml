@@ -20,7 +20,7 @@ criterion = "0.5.1"
 uniffi = {path = "../../uniffi", version = "0.25", features = ["build"] }
 
 [dev-dependencies]
-uniffi_bindgen = {path = "../../uniffi_bindgen"}
+uniffi = {path = "../../uniffi", version = "0.24", features = ["bindgen-tests"] }
 
 [[bench]]
 name = "benchmarks"

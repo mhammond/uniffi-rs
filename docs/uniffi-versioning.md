@@ -1,55 +1,43 @@
 # The UniFFI Versioning System
 
-UniFFI versions are tricky since both libraries and applications depend on UniFFI.  This can lead to situations where `app_foo` depends on `lib_bar` and `lib_baz`, and all of those depend on UniFFI.  In that situation, each of those crates must depend on a UniFFI version that's compatible with all the others.
+UniFFI versions are tricky due to many inter-related dependencies between all the UniFFI components.
+Libraries and applications depend on UniFFI, leading to situations where `app_foo` depends on `lib_bar` and `lib_baz`,
+all with a common UniFFI dependency. This dependency exists in both the Rust code and foreign bindings - each piece must be compatible.
 
-All of this means that breaking changes to UniFFI are costly for our consumers.  In the situation above, if `lib_bar` upgrades UniFFI with a breaking change, then both `lib_baz` and `app_foo` would also need to upgrade UniFFI and all of these changes would need to be coordinated together.
+In that situation, each of those crates must depend on a UniFFI version that's compatible with all the others.
+Any semver-incompatible change means all these consumers must coordinate an update.
+But most of the version bumps aren't actually breaking to consumers of UniFFI without external dependencies.
 
-Therefore, we want to have a system which minimizes the amount of breaking changes for consumers.
+To help with this, UniFFI has a top-level `uniffi` crate which re-exports all functionality
+required by the most common use-cases - if your needs can be met via the top-level crate, that's
+what you should use.
 
-## Breaking changes and SemVer
+While UniFFI remains at 0.x.x, all minor version bumps will be considered by semver to be "breaking".
 
-UniFFI follows the [SemVer rules from the Cargo Book](https://doc.rust-lang.org/cargo/reference/resolver.html#semver-compatibility) which states "Versions are considered compatible if their left-most non-zero major/minor/patch component is the same".  Since all crates are currently on major version `0`, this means a breaking change will result in a bump of the minor version.  Once we are on major version `1` or later, a breaking change will result in a major version bump.  In the text below, these are referred to as a "breaking version bump".
+See [more about semver](https://doc.rust-lang.org/cargo/reference/resolver.html#semver-compatibility)
 
-## How consumers should depend on UniFFI
+## Internal bindings
 
-Crates that use UniFFI to generate scaffolding or bindings should only have a direct dependency to the `uniffi` crate, which re-exports the top-level functionality from other crates:
+If you use UniFFI with only bindings in the UniFFI repo (ie, Python, Swift, Kotlin), you can take a dependency
+on just `uniffi`, which re-exports the top-level functionality from other crates.
 
-* Generating the scaffolding via a build script
-* Generating the bindings via a CLI
-* Generating the scaffolding or bindings programmatically
+## External bindings
 
-Because the crates only directly depend on `uniffi`, they only need to care about the `uniffi` version and can ignore the versions of sub-dependencies.  This means that breaking changes in `uniffi_bindgen` won't be a breaking change for consumers, as long as it doesn't affect the functionality listed above.
+Bindings outside of the repo will probably need to to take a direct dependency on
+a specific version of `uniffi_bindgen`.
 
-## How binding generators should depend on UniFFI
+Unfortunately, this means more breakng changes. Eg, let's say `uniffi` is at version `0.42.6`, which internally has `uniffi_bindgen` at version `0.66.6`
+* Your `uniffi-go` dependency must depend on `uniffi_bindgen="0.66"`
+* A new `uniffi` version `0.42.7` is released, which is semver compatible with the existing `0.42.6` :tada:
+* But `uniiffi_bindgen` was bumped to `0.67.0` in this release :sob:
 
-Crates that use uniffi_bindgen to implement bindings for 3rd party languages should always have
-a direct dependency to a specific uniffi-bindgen version. This version will be incremented to
-indicate a breaking change whenever the implementation of bindings might need to change, even if
-these changes would not be noticed by the user (ie, even when we did not bump the major "uniffi"
-version.)
-
-Unfortunately, this might well mean that in some cases the users of some bindings might be
-unable to update to what the UniFFI project considers a minor (ie, non breaking) change.
-For example:
-
-* UniFFI version X ships with uniffi_bindgen version Y
-* UniFFI implements internal changes to uniffi_bindgen - nothing which changes the FFI or how types
-  are named, but enough that binding generators require some work to be compatible.
-* The next UniFFI release is likely ship with trhe version for `uniffi` indicating a semver compatible
-  change to that crate, but a semver breaking change for `uniffi_bindgen`
-
-The end result is that:
-* Most users depend only on the top-level `uniffi` version, so see a semver compatible change.
-* Users who depends on 3rd party bindings will find that those bindings declare they need
-  uniffi_bindgen version Y - but the new release comes with a semver incompatible version.
-* Users find themselves unable to update UniFFI to what appears to be semver compatible version.
+So this semver-compatible bump of `uniffi` was still breaking for consumers of your `uniffi-go` version.
 
 Note that this behaviour is a feature of how we are using versioning.
 
-
 ## What is a breaking change?
 
-To expand on the previous point, here are the scenarios where `uniffi` should get a breaking version bump:
+This mean the top-level `uniffi` crate needs guidance as to when it should get a breaking version bump:
 
 * Backward incompatible changes to the UDL/proc-macro parsing:
   * Removing a feature.
@@ -59,7 +47,10 @@ To expand on the previous point, here are the scenarios where `uniffi` should ge
   * Changing how FFI functions are named.
   * Changing how FFI functions are called
   * Changing how types are represented.
-(XXX - is the above correct? Shouldn't that just be the bindgen version? See comments above?)
+
+# UNIFFI_CONTRACT_VERSION
+
+So yeah, what is this?
 
 ## How to handle breaking changes
 
