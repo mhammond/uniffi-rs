@@ -106,7 +106,7 @@ impl ScaffoldingBits {
         let rust_fn_call = quote! { #ident(#call_params) };
         // UDL mode adds an extra conversion (#1749)
         let rust_fn_call = if udl_mode && sig.looks_like_result {
-            quote! { #rust_fn_call.map_err(::std::convert::Into::into) }
+            quote! { #rust_fn_call.map_err(|e| UniffiErrorConverter::convert(e)) }
         } else {
             rust_fn_call
         };
@@ -162,7 +162,7 @@ impl ScaffoldingBits {
         let rust_fn_call = quote! { uniffi_args.0.#ident(#call_params) };
         // UDL mode adds an extra conversion (#1749)
         let rust_fn_call = if udl_mode && sig.looks_like_result {
-            quote! { #rust_fn_call.map_err(::std::convert::Into::into) }
+            quote! { #rust_fn_call.map_err(|e| UniffiErrorConverter::convert(e)) }
         } else {
             rust_fn_call
         };
@@ -184,7 +184,7 @@ impl ScaffoldingBits {
             // For UDL
             (true, false) => quote! { ::std::sync::Arc::new(#rust_fn_call) },
             (true, true) => {
-                quote! { #rust_fn_call.map(::std::sync::Arc::new).map_err(::std::convert::Into::into) }
+                quote! { #rust_fn_call.map(::std::sync::Arc::new).map_err(|e| UniffiErrorConverter::convert(e)) }
             }
             (false, _) => rust_fn_call,
         };
