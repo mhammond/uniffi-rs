@@ -1577,6 +1577,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "uniffi-example-app-typical"
+version = "0.0.1"
+dependencies = [
+ "uniffi",
+ "uniffi-example-geometry",
+ "uniffi-example-todolist",
+]
+
+[[package]]
 name = "uniffi-example-arithmetic"
 version = "0.22.0"
 dependencies = [

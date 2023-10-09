@@ -1,0 +1,13 @@
+[package]
+name = "uniffi-example-app-typical"
+edition = "2021"
+version = "0.0.1"
+
+[lib]
+crate-type = ["cdylib"]
+name = "uniffi_typical_app"
+
+[dependencies]
+uniffi = { path = "../../../../uniffi" }
+uniffi-example-todolist = { path = "../../../todolist" }
+uniffi-example-geometry = { path = "../../../geometry" }
