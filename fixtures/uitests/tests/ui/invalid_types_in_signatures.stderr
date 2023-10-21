@@ -1,3 +1,9 @@
+error: Can't customize the error type for this signature
+  --> tests/ui/invalid_types_in_signatures.rs:26:5
+   |
+26 | pub fn return_not_error_type() -> () {
+   |     ^^
+
 error[E0277]: the trait bound `Result<(), ErrorType>: Lift<UniFfiTag>` is not satisfied
   --> tests/ui/invalid_types_in_signatures.rs:17:1
    |

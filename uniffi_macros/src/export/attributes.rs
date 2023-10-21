@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::{
     parse::{Parse, ParseStream},
-    Attribute, LitStr, Meta, PathArguments, PathSegment, Token,
+    Attribute, LitStr, Meta, PathArguments, PathSegment, Token, Type,
 };
 
 #[derive(Default)]
@@ -13,6 +13,7 @@ pub struct ExportAttributeArguments {
     pub(crate) callback_interface: Option<kw::callback_interface>,
     pub(crate) with_callback_interface: Option<kw::with_callback_interface>,
     pub(crate) constructor: Option<kw::constructor>,
+    pub(crate) e: Option<Type>,
     // tried to make this a vec but that got messy quickly...
     pub(crate) trait_debug: Option<kw::Debug>,
     pub(crate) trait_display: Option<kw::Display>,
@@ -49,6 +50,13 @@ impl UniffiAttributeArgs for ExportAttributeArguments {
         } else if lookahead.peek(kw::constructor) {
             Ok(Self {
                 constructor: input.parse()?,
+                ..Self::default()
+            })
+        } else if lookahead.peek(kw::E) {
+            let _: kw::E = input.parse()?;
+            let _: Token![=] = input.parse()?;
+            Ok(Self {
+                e: Some(input.parse()?),
                 ..Self::default()
             })
         } else if lookahead.peek(kw::Debug) {
@@ -88,6 +96,7 @@ impl UniffiAttributeArgs for ExportAttributeArguments {
                 other.with_callback_interface,
             )?,
             constructor: either_attribute_arg(self.constructor, other.constructor)?,
+            e: either_attribute_arg(self.e, other.e)?,
             trait_debug: either_attribute_arg(self.trait_debug, other.trait_debug)?,
             trait_display: either_attribute_arg(self.trait_display, other.trait_display)?,
             trait_hash: either_attribute_arg(self.trait_hash, other.trait_hash)?,

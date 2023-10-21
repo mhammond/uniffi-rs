@@ -1,3 +1,8 @@
+{% match func.throws_type() %}
+{% when Some(e) %}
+#[::uniffi::export_for_udl(E = {{e|type_rs}})]
+{% else %}
+{% endmatch %}
 #[::uniffi::export_for_udl]
 pub {% if func.is_async() %}async {% endif %}fn r#{{ func.name() }}(
     {%- for arg in func.arguments() %}

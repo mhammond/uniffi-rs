@@ -161,12 +161,17 @@ fn process_uniffi_trait_method(
     let docstring = extract_docstring(&item.attrs)?;
 
     let ffi_func = gen_ffi_function(
-        &FnSignature::new_method(self_ident.clone(), item.sig.clone(), docstring.clone())?,
+        &FnSignature::new_method(
+            self_ident.clone(),
+            item.sig.clone(),
+            &None,
+            docstring.clone(),
+        )?,
         &ExportAttributeArguments::default(),
         udl_mode,
     )?;
     // metadata for the method, which will be packed inside metadata for the trait.
     let method_meta =
-        FnSignature::new_method(self_ident.clone(), item.sig, docstring)?.metadata_expr()?;
+        FnSignature::new_method(self_ident.clone(), item.sig, &None, docstring)?.metadata_expr()?;
     Ok((ffi_func, method_meta))
 }

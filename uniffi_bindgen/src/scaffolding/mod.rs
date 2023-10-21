@@ -63,12 +63,33 @@ mod filters {
                 kind: ExternalKind::Interface,
                 ..
             } => format!("::std::sync::Arc<r#{name}>"),
+            Type::External { name, .. } => format!("r#{name}"),
+        })
+    }
+
+    /// Type used to return to the ffi function. It will wrap as arc and into etc.
+    pub fn err_type_rs(type_: &Type) -> Result<String, askama::Error> {
+        if let Type::Object { name, imp, .. } = type_ {
+            return Ok(imp.rust_name_for(name));
+        }
+        type_rs(type_)
+    }
+
+    // Map a type to Rust code that specifies the FfiConverter implementation.
+    //
+    // This outputs something like `<MyStruct as Lift<crate::UniFfiTag>>`
+    pub fn ffi_trait(type_: &Type, trait_name: &str) -> Result<String, askama::Error> {
+        Ok(match type_ {
             Type::External {
                 name,
-                kind: ExternalKind::Trait,
+                kind: ExternalKind::Trait | ExternalKind::Interface,
                 ..
             } => format!("::std::sync::Arc<dyn r#{name}>"),
             Type::External { name, .. } => format!("r#{name}"),
+            _ => format!(
+                "<{} as ::uniffi::{trait_name}<crate::UniFfiTag>>",
+                type_rs(type_)?
+            ),
         })
     }
 

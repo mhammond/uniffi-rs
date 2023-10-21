@@ -99,18 +99,11 @@ struct ScaffoldingBits {
 }
 
 impl ScaffoldingBits {
-    fn new_for_function(sig: &FnSignature, udl_mode: bool) -> Self {
+    fn new_for_function(sig: &FnSignature) -> Self {
         let ident = &sig.ident;
         let params: Vec<_> = sig.args.iter().map(NamedArg::scaffolding_param).collect();
         let call_params = sig.rust_call_params(false);
         let rust_fn_call = quote! { #ident(#call_params) };
-        // UDL mode adds an extra conversion (#1749)
-        let rust_fn_call = if udl_mode && sig.looks_like_result {
-            quote! { #rust_fn_call.map_err(::std::convert::Into::into) }
-        } else {
-            rust_fn_call
-        };
-
         Self {
             params,
             lift_closure: sig.lift_closure(None),
@@ -118,12 +111,7 @@ impl ScaffoldingBits {
         }
     }
 
-    fn new_for_method(
-        sig: &FnSignature,
-        self_ident: &Ident,
-        is_trait: bool,
-        udl_mode: bool,
-    ) -> Self {
+    fn new_for_method(sig: &FnSignature, self_ident: &Ident, is_trait: bool) -> Self {
         let ident = &sig.ident;
         let lift_impl = if is_trait {
             quote! {
@@ -160,13 +148,6 @@ impl ScaffoldingBits {
         }));
         let call_params = sig.rust_call_params(true);
         let rust_fn_call = quote! { uniffi_args.0.#ident(#call_params) };
-        // UDL mode adds an extra conversion (#1749)
-        let rust_fn_call = if udl_mode && sig.looks_like_result {
-            quote! { #rust_fn_call.map_err(::std::convert::Into::into) }
-        } else {
-            rust_fn_call
-        };
-
         Self {
             params,
             lift_closure,
@@ -179,14 +160,14 @@ impl ScaffoldingBits {
         let params: Vec<_> = sig.args.iter().map(NamedArg::scaffolding_param).collect();
         let call_params = sig.rust_call_params(false);
         let rust_fn_call = quote! { #self_ident::#ident(#call_params) };
-        // UDL mode adds extra conversions (#1749)
-        let rust_fn_call = match (udl_mode, sig.looks_like_result) {
-            // For UDL
-            (true, false) => quote! { ::std::sync::Arc::new(#rust_fn_call) },
-            (true, true) => {
-                quote! { #rust_fn_call.map(::std::sync::Arc::new).map_err(::std::convert::Into::into) }
+        let rust_fn_call = if udl_mode {
+            if sig.is_result() {
+                quote! { #rust_fn_call.map(::std::sync::Arc::new) }
+            } else {
+                quote! { ::std::sync::Arc::new(#rust_fn_call) }
             }
-            (false, _) => rust_fn_call,
+        } else {
+            rust_fn_call
         };
 
         Self {
@@ -211,12 +192,10 @@ pub(super) fn gen_ffi_function(
         lift_closure,
         rust_fn_call,
     } = match &sig.kind {
-        FnKind::Function => ScaffoldingBits::new_for_function(sig, udl_mode),
-        FnKind::Method { self_ident } => {
-            ScaffoldingBits::new_for_method(sig, self_ident, false, udl_mode)
-        }
+        FnKind::Function => ScaffoldingBits::new_for_function(sig),
+        FnKind::Method { self_ident } => ScaffoldingBits::new_for_method(sig, self_ident, false),
         FnKind::TraitMethod { self_ident, .. } => {
-            ScaffoldingBits::new_for_method(sig, self_ident, true, udl_mode)
+            ScaffoldingBits::new_for_method(sig, self_ident, true)
         }
         FnKind::Constructor { self_ident } => {
             ScaffoldingBits::new_for_constructor(sig, self_ident, udl_mode)
@@ -229,9 +208,10 @@ pub(super) fn gen_ffi_function(
         true => quote! {},
     };
 
-    let ffi_ident = sig.scaffolding_fn_ident()?;
     let name = &sig.name;
-    let return_impl = &sig.return_impl();
+    let ffi_ident = sig.scaffolding_fn_ident()?;
+    let return_impl = &sig.ffi_return_impl()?;
+    let map_err = sig.map_err(); // extra err conversions (#1749)
 
     Ok(if !sig.is_async {
         quote! {
@@ -246,7 +226,7 @@ pub(super) fn gen_ffi_function(
                 ::uniffi::rust_call(call_status, || {
                     #return_impl::lower_return(
                         match uniffi_lift_args() {
-                            Ok(uniffi_args) => #rust_fn_call,
+                            Ok(uniffi_args) => #rust_fn_call #map_err,
                             Err((arg_name, anyhow_error)) => {
                                 #return_impl::handle_failed_lift(arg_name, anyhow_error)
                             },
@@ -256,7 +236,8 @@ pub(super) fn gen_ffi_function(
             }
         }
     } else {
-        let mut future_expr = rust_fn_call;
+        // XXX - error mapping not implemented - see `#[cfg(feature = "async")]` in the error-types fixture.
+        let mut future_expr = quote! { #rust_fn_call #map_err };
         if matches!(arguments.async_runtime, Some(AsyncRuntime::Tokio(_))) {
             future_expr = quote! { ::uniffi::deps::async_compat::Compat::new(#future_expr) }
         }

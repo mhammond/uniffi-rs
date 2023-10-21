@@ -9,6 +9,12 @@ publish = false
 crate-type = ["lib", "cdylib"]
 name = "uniffi_error_types"
 
+[features]
+# things that are broken.
+async = []
+trait-result = []
+trait-impl = []
+
 [dependencies]
 uniffi = {path = "../../uniffi"}
 anyhow = "1"

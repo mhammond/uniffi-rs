@@ -7,9 +7,9 @@
 {% include "Protocol.py" %}
 
 {% if ci.is_name_used_as_error(name) %}
-class {{ type_name }}(Exception):
+class {{ impl_name }}(Exception):
 {%- else %}
-class {{ type_name }}:
+class {{ impl_name }}:
 {%- endif %}
     {%- call py::docstring(obj, 4) %}
     _pointer: ctypes.c_void_p
@@ -50,11 +50,12 @@ class {{ type_name }}:
         # Call the (fallible) function before creating any half-baked object instances.
         pointer = {% call py::to_ffi_call(cons) %}
         return cls._make_instance_(pointer)
-{% endfor %}
+{%- endfor %}
 
 {%- for meth in obj.methods() -%}
     {%- call py::method_decl(meth.name()|fn_name, meth) %}
 {%- endfor %}
+
 {%- for tm in obj.uniffi_traits() -%}
 {%-     match tm %}
 {%-         when UniffiTrait::Debug { fmt } %}

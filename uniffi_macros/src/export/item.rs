@@ -36,7 +36,7 @@ impl ExportItem {
         match item {
             syn::Item::Fn(item) => {
                 let docstring = extract_docstring(&item.attrs)?;
-                let sig = FnSignature::new_function(item.sig, docstring)?;
+                let sig = FnSignature::new_function(item.sig, &args.e, docstring)?;
                 Ok(Self::Function { sig })
             }
             syn::Item::Impl(item) => Self::from_impl(item, args.constructor.is_some()),
@@ -55,7 +55,8 @@ impl ExportItem {
         }
     }
 
-    pub fn from_impl(item: syn::ItemImpl, force_constructor: bool) -> syn::Result<Self> {
+    pub fn from_impl(item: syn::ItemImpl, args: &ExportAttributeArguments) -> syn::Result<Self> {
+        let force_constructor = args.constructor.is_some();
         if !item.generics.params.is_empty() || item.generics.where_clause.is_some() {
             return Err(syn::Error::new_spanned(
                 &item.generics,
@@ -102,12 +103,14 @@ impl ExportItem {
                     ImplItem::Constructor(FnSignature::new_constructor(
                         self_ident.clone(),
                         impl_fn.sig,
+                        &args.e,
                         docstring,
                     )?)
                 } else {
                     ImplItem::Method(FnSignature::new_method(
                         self_ident.clone(),
                         impl_fn.sig,
+                        &args.e,
                         docstring,
                     )?)
                 };
@@ -162,6 +165,7 @@ impl ExportItem {
                     ImplItem::Method(FnSignature::new_trait_method(
                         self_ident.clone(),
                         tim.sig,
+                        &args.e,
                         i as u32,
                         docstring,
                     )?)

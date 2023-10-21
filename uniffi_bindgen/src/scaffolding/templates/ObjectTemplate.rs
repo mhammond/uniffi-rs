@@ -46,6 +46,11 @@ struct {{ obj.rust_name() }} { }
 
 {%- for cons in obj.constructors() %}
 #[::uniffi::export_for_udl(constructor)]
+{% match cons.throws_type() %}
+{% when Some(e) %}
+#[::uniffi::export_for_udl(E = {{e|type_rs}})]
+{% else %}
+{% endmatch %}
 impl {{ obj.rust_name() }} {
     pub fn r#{{ cons.name() }}(
         {%- for arg in cons.arguments() %}
@@ -54,8 +59,8 @@ impl {{ obj.rust_name() }} {
     )
     {%- match (cons.return_type(), cons.throws_type()) %}
     {%- when (Some(return_type), None) %} -> {{ return_type|type_rs }}
-    {%- when (Some(return_type), Some(error_type)) %} -> ::std::result::Result::<{{ return_type|type_rs }}, {{ error_type|type_rs }}>
-    {%- when (None, Some(error_type)) %} -> ::std::result::Result::<(), {{ error_type|type_rs }}>
+    {%- when (Some(return_type), Some(error_type)) %} -> ::std::result::Result::<{{ return_type|type_rs }}, {{ error_type|err_type_rs }}>
+    {%- when (None, Some(error_type)) %} -> ::std::result::Result::<(), {{ error_type|err_type_rs }}>
     {%- when (None, None) %}
     {%- endmatch %}
     {
@@ -66,6 +71,11 @@ impl {{ obj.rust_name() }} {
 
 {%- for meth in obj.methods() %}
 #[::uniffi::export_for_udl]
+{% match meth.throws_type() %}
+{% when Some(e) %}
+#[::uniffi::export_for_udl(E = {{e|type_rs}})]
+{% else %}
+{% endmatch %}
 impl {{ obj.rust_name() }} {
     pub {% if meth.is_async() %}async {% endif %}fn r#{{ meth.name() }}(
         {% if meth.takes_self_by_arc()%}self: Arc<Self>{% else %}&self{% endif %},
@@ -75,8 +85,8 @@ impl {{ obj.rust_name() }} {
     )
     {%- match (meth.return_type(), meth.throws_type()) %}
     {%- when (Some(return_type), None) %} -> {{ return_type|type_rs }}
-    {%- when (Some(return_type), Some(error_type)) %} -> ::std::result::Result::<{{ return_type|type_rs }}, {{ error_type|type_rs }}>
-    {%- when (None, Some(error_type)) %} -> ::std::result::Result::<(), {{ error_type|type_rs }}>
+    {%- when (Some(return_type), Some(error_type)) %} -> ::std::result::Result::<{{ return_type|type_rs }}, {{ error_type|err_type_rs }}>
+    {%- when (None, Some(error_type)) %} -> ::std::result::Result::<(), {{ error_type|err_type_rs }}>
     {%- when (None, None) %}
     {%- endmatch %}
     {

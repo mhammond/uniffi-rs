@@ -4,24 +4,7 @@
 
 use std::sync::Arc;
 
-fn oops() -> anyhow::Result<()> {
-    anyhow::bail!("oops");
-}
-
-fn anyhow_bail(message: String) -> anyhow::Result<()> {
-    anyhow::bail!("{message}");
-}
-
-fn anyhow_with_context(message: String) -> anyhow::Result<()> {
-    Err(anyhow::Error::msg(message).context("because uniffi told me so"))
-}
-
-fn get_error(message: String) -> std::sync::Arc<ErrorInterface> {
-    std::sync::Arc::new(ErrorInterface {
-        e: anyhow::Error::msg(message),
-    })
-}
-
+// A struct exposed to foreign bindings as an Error interface.
 #[derive(Debug, thiserror::Error)]
 #[error("{e:?}")]
 pub struct ErrorInterface {
@@ -37,73 +20,124 @@ impl ErrorInterface {
     }
 }
 
+// A conversion into our ErrorInterface from anyhow::Error.
 impl From<anyhow::Error> for ErrorInterface {
     fn from(e: anyhow::Error) -> Self {
         Self { e }
     }
 }
 
-fn throw_rich(e: String) -> Result<(), RichError> {
-    Err(RichError { e })
+// Defined in UDL as throwing EnumError.
+fn simple() -> Result<(), EnumError> {
+    Err(EnumError::Oops)
 }
 
-fn get_rich_error(e: String) -> std::sync::Arc<RichError> {
-    std::sync::Arc::new(RichError { e })
+// Defined in UDL as throwing ErrorInterface.
+fn oops() -> anyhow::Result<()> {
+    anyhow::bail!("oops");
 }
 
+// Procmacros need to be told the type.
+#[uniffi::export(E = Arc<ErrorInterface>)]
+// Explicit result used here but `anyhow::Result<()>` is fine too.
+fn poops() -> Result<(), anyhow::Error> {
+    Err(anyhow::Error::msg("poops").context("via a procmacro"))
+}
+
+#[cfg(feature = "async")] // async broken too.
+#[uniffi::export(E = Arc<ErrorInterface>)]
+pub async fn apoops() -> anyhow::Result<()> {
+    unreachable!()
+}
+
+// The error interface can still be used as a regular interface.
+fn get_error(message: String) -> Arc<ErrorInterface> {
+    std::sync::Arc::new(ErrorInterface {
+        e: anyhow::Error::msg(message),
+    })
+}
+
+// Exercise constructors and methods.
+#[derive(uniffi::Object, Debug)]
+pub struct ErrorThrower {}
+
+#[uniffi::export(E = Arc<ErrorInterface>)]
+impl ErrorThrower {
+    #[uniffi::constructor]
+    fn new(ok: bool) -> anyhow::Result<Arc<Self>> {
+        if ok {
+            Ok(Arc::new(Self {}))
+        } else {
+            anyhow::bail!("oops")
+        }
+    }
+
+    fn throw(&self) -> anyhow::Result<()> {
+        anyhow::bail!("threw");
+    }
+}
+
+#[cfg(feature = "trait-result")]
+mod trait_result {
+    use super::*;
+
+    // doesn't work
+    #[uniffi::export(E = Arc<ErrorInterface>)]
+    trait TraitThrower: Send + Sync {
+        fn throw(&self) -> anyhow::Result<()> {
+            anyhow::bail!("threw");
+        }
+    }
+}
+
+#[cfg(feature = "trait-impl")]
+mod trait_impl {
+    // for foreign traits to be able to implement the trait,
+    // it must have a trait for an error!
+    #[uniffi::export]
+    pub trait ErrorTrait: Send + Sync + std::error::Error {
+        fn message(&self) -> String;
+    }
+
+    // Then, as above, we need:
+    // #[uniffi::export(E = Arc<dyn ErrorTrait>)] ???
+    // trait {
+    //  ... normal anyhow::Result<> impl
+    //  }
+}
+
+// Enum errors.
 #[derive(Debug, thiserror::Error)]
-#[error("RichError: {e:?}")]
-pub struct RichError {
-    e: String,
+pub enum EnumError {
+    #[error("oops")]
+    Oops,
 }
 
-impl RichError {}
+// Any module can work like `anyhow` above. Eg, `EnumError` can be
+// specifically for the foreign error interface, but internally
+// the Rust code uses a different Error:
+// (XXX - the code below is *not* demonstrating that - to demonstrate that
+// we'd need a function *outside* the module to return `enums::Result<>` AND
+// the error to be an interface...)
+mod enums {
+    use super::*;
+    pub enum Error {
+        BadThing1,
+    }
+    pub type Result<T> = std::result::Result<T, Error>;
 
-struct TestInterface {}
-
-impl TestInterface {
-    fn new() -> Self {
-        TestInterface {}
+    // public functions returning the local error type via `?`
+    #[uniffi::export(E = EnumError)]
+    fn poopse() -> Result<()> {
+        Err(Error::BadThing1)
     }
 
-    fn fallible_new() -> anyhow::Result<Self> {
-        Err(anyhow::Error::msg("fallible_new"))
+    // Convert the local errors to public errors.
+    impl From<Error> for EnumError {
+        fn from(_: Error) -> Self {
+            super::EnumError::Oops
+        }
     }
-
-    fn anyhow_bail(&self, message: String) -> anyhow::Result<()> {
-        anyhow::bail!("TestInterface - {message}");
-    }
-}
-
-// A procmacro as an error
-#[derive(Debug, uniffi::Error, thiserror::Error)]
-pub struct ProcErrorInterface {
-    e: String,
-}
-
-#[uniffi::export]
-impl ProcErrorInterface {
-    fn message(&self) -> String {
-        self.e.clone()
-    }
-}
-
-impl std::fmt::Display for ProcErrorInterface {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ProcErrorInterface {}", self.e)
-    }
-}
-
-// XXX - sadly no `From` support, making this not useful for structs etc returning
-// `anyhow::Error` - need ability to tell the procmaco what types to use in the ffi functions?
-#[uniffi::export]
-fn throw_proc_error(e: String) -> Result<(), Arc<ProcErrorInterface>> {
-    Err(Arc::new(ProcErrorInterface { e }))
-}
-
-#[uniffi::export]
-fn return_proc_error(e: String) -> Arc<ProcErrorInterface> {
-    Arc::new(ProcErrorInterface { e })
 }
 
 uniffi::include_scaffolding!("error_types");

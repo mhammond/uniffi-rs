@@ -6,8 +6,10 @@ use crate::util::{
     create_metadata_items, ident_to_string, mod_path, try_metadata_value_from_usize,
 };
 use proc_macro2::{Span, TokenStream};
-use quote::quote;
-use syn::{spanned::Spanned, FnArg, Ident, Pat, Receiver, ReturnType, Type};
+use quote::{quote, ToTokens};
+use syn::{
+    spanned::Spanned, FnArg, GenericArgument, Ident, Pat, PathArguments, Receiver, ReturnType, Type,
+};
 
 pub(crate) struct FnSignature {
     pub kind: FnKind,
@@ -18,61 +20,80 @@ pub(crate) struct FnSignature {
     pub is_async: bool,
     pub receiver: Option<ReceiverArg>,
     pub args: Vec<NamedArg>,
-    pub return_ty: TokenStream,
-    // Does this the return type look like a result?
-    // Only use this in UDL mode.
-    // In general, it's not reliable because it fails for type aliases.
-    pub looks_like_result: bool,
+    return_kind: ReturnKind,
+    ffi_custom_err: Option<Type>,
     pub docstring: String,
 }
 
 impl FnSignature {
-    pub(crate) fn new_function(sig: syn::Signature, docstring: String) -> syn::Result<Self> {
-        Self::new(FnKind::Function, sig, docstring)
+    pub(crate) fn new_function(
+        sig: syn::Signature,
+        ffi_custom_err: &Option<Type>,
+        docstring: String,
+    ) -> syn::Result<Self> {
+        Self::new(FnKind::Function, sig, ffi_custom_err, docstring)
     }
 
     pub(crate) fn new_method(
         self_ident: Ident,
         sig: syn::Signature,
+        ffi_custom_err: &Option<Type>,
         docstring: String,
     ) -> syn::Result<Self> {
-        Self::new(FnKind::Method { self_ident }, sig, docstring)
+        Self::new(
+            FnKind::Method { self_ident },
+            sig,
+            ffi_custom_err,
+            docstring,
+        )
     }
 
     pub(crate) fn new_constructor(
         self_ident: Ident,
         sig: syn::Signature,
+        ffi_custom_err: &Option<Type>,
         docstring: String,
     ) -> syn::Result<Self> {
-        Self::new(FnKind::Constructor { self_ident }, sig, docstring)
+        Self::new(
+            FnKind::Constructor { self_ident },
+            sig,
+            ffi_custom_err,
+            docstring,
+        )
     }
 
     pub(crate) fn new_trait_method(
         self_ident: Ident,
         sig: syn::Signature,
+        ffi_custom_err: &Option<Type>,
         index: u32,
         docstring: String,
     ) -> syn::Result<Self> {
-        Self::new(FnKind::TraitMethod { self_ident, index }, sig, docstring)
+        Self::new(
+            FnKind::TraitMethod { self_ident, index },
+            sig,
+            ffi_custom_err,
+            docstring,
+        )
     }
 
-    pub(crate) fn new(kind: FnKind, sig: syn::Signature, docstring: String) -> syn::Result<Self> {
-        let span = sig.span();
-        let ident = sig.ident;
-        let looks_like_result = looks_like_result(&sig.output);
-        let output = match sig.output {
-            ReturnType::Default => quote! { () },
-            ReturnType::Type(_, ty) => quote! { #ty },
-        };
+    pub(crate) fn new(
+        kind: FnKind,
+        sig: syn::Signature,
+        ffi_custom_err: &Option<Type>,
+        docstring: String,
+    ) -> syn::Result<Self> {
+        let return_kind = ReturnKind::from_return_type(&sig.output);
         let is_async = sig.asyncness.is_some();
 
         if is_async && matches!(kind, FnKind::Constructor { .. }) {
             return Err(syn::Error::new(
-                span,
+                sig.span(),
                 "Async constructors are not supported",
             ));
         }
 
+        let span = sig.span();
         let mut input_iter = sig.inputs.into_iter().map(Arg::try_from).peekable();
 
         let receiver = input_iter
@@ -100,21 +121,49 @@ impl FnSignature {
             kind,
             span,
             mod_path,
-            name: ident_to_string(&ident),
-            ident,
+            name: ident_to_string(&sig.ident),
+            ident: sig.ident,
             is_async,
             receiver,
             args,
-            return_ty: output,
-            looks_like_result,
+            return_kind,
+            ffi_custom_err: ffi_custom_err.clone(),
             docstring,
         })
     }
 
-    pub fn return_impl(&self) -> TokenStream {
-        let return_ty = &self.return_ty;
-        quote! {
+    pub fn is_result(&self) -> bool {
+        matches!(self.return_kind, ReturnKind::Result { .. })
+    }
+
+    pub fn ffi_return_impl(&self) -> syn::Result<TokenStream> {
+        let return_ty = self.ffi_return_ty()?;
+        Ok(quote! {
             <#return_ty as ::uniffi::LowerReturn<crate::UniFfiTag>>
+        })
+    }
+
+    pub fn ffi_return_ty(&self) -> syn::Result<TokenStream> {
+        Ok(match &self.return_kind {
+            ReturnKind::Void => quote! { () },
+            ReturnKind::Value { t } => t.to_token_stream(),
+            ReturnKind::Result { t, e } => {
+                let actual_e = self.ffi_custom_err.as_ref().unwrap_or(e).to_token_stream();
+                quote! { ::std::result::Result<#t, #actual_e> }
+            }
+        })
+    }
+
+    // Tokens after the call to the exported functions to map the error type.
+    pub fn map_err(&self) -> Option<TokenStream> {
+        match &self.return_kind {
+            ReturnKind::Result { .. } => {
+                let map_arc = self.ffi_custom_err.as_ref().map(|new_e| {
+                    type_is_arc(&new_e).then(|| quote! { .map_err(::std::sync::Arc::new) })
+                });
+                Some(quote! { .map_err(::std::convert::Into::into) #map_arc })
+            }
+            _ => None,
         }
     }
 
@@ -201,7 +250,6 @@ impl FnSignature {
     pub(crate) fn metadata_expr(&self) -> syn::Result<TokenStream> {
         let Self {
             name,
-            return_ty,
             is_async,
             mod_path,
             docstring,
@@ -214,6 +262,7 @@ impl FnSignature {
             "UniFFI limits functions to 256 arguments",
         )?;
         let arg_metadata_calls = self.args.iter().map(NamedArg::arg_metadata);
+        let return_impl = self.ffi_return_impl()?;
 
         match &self.kind {
             FnKind::Function => Ok(quote! {
@@ -223,7 +272,7 @@ impl FnSignature {
                     .concat_bool(#is_async)
                     .concat_value(#args_len)
                     #(#arg_metadata_calls)*
-                    .concat(<#return_ty as ::uniffi::LowerReturn<crate::UniFfiTag>>::TYPE_ID_META)
+                    .concat(#return_impl::TYPE_ID_META)
                     .concat_long_str(#docstring)
             }),
 
@@ -237,7 +286,7 @@ impl FnSignature {
                         .concat_bool(#is_async)
                         .concat_value(#args_len)
                         #(#arg_metadata_calls)*
-                        .concat(<#return_ty as ::uniffi::LowerReturn<crate::UniFfiTag>>::TYPE_ID_META)
+                        .concat(#return_impl::TYPE_ID_META)
                         .concat_long_str(#docstring)
                 })
             }
@@ -253,7 +302,7 @@ impl FnSignature {
                         .concat_bool(#is_async)
                         .concat_value(#args_len)
                         #(#arg_metadata_calls)*
-                        .concat(<#return_ty as ::uniffi::LowerReturn<crate::UniFfiTag>>::TYPE_ID_META)
+                        .concat(#return_impl::TYPE_ID_META)
                         .concat_long_str(#docstring)
                 })
             }
@@ -267,7 +316,7 @@ impl FnSignature {
                         .concat_str(#name)
                         .concat_value(#args_len)
                         #(#arg_metadata_calls)*
-                        .concat(<#return_ty as ::uniffi::LowerReturn<crate::UniFfiTag>>::TYPE_ID_META)
+                        .concat(#return_impl::TYPE_ID_META)
                         .concat_long_str(#docstring)
                 })
             }
@@ -459,18 +508,72 @@ impl NamedArg {
     }
 }
 
-fn looks_like_result(return_type: &ReturnType) -> bool {
-    if let ReturnType::Type(_, ty) = return_type {
-        if let Type::Path(p) = &**ty {
-            if let Some(seg) = p.path.segments.last() {
-                if seg.ident == "Result" {
-                    return true;
+// Our version of a syn::ReturnType.
+enum ReturnKind {
+    Void,
+    // A Result we managed to parse.
+    Result { t: Type, e: Type },
+    // Not a Result, so must be the value.
+    Value { t: Type },
+}
+
+impl ReturnKind {
+    fn from_return_type(return_type: &ReturnType) -> Self {
+        let ReturnType::Type(_, ty) = return_type else {
+            return ReturnKind::Void;
+        };
+        let value = ReturnKind::Value { t: *ty.clone() }; // default fallback value
+        let Type::Path(p) = &**ty else {
+            return value;
+        };
+        let seg = match p.path.segments.last() {
+            Some(seg) if seg.ident == "Result" => seg,
+            _ => return value,
+        };
+        // Unpack the Result.
+        match &seg.arguments {
+            // A `..::Result<T, E>`
+            PathArguments::AngleBracketed(args) if args.args.len() == 2 => {
+                let (Some(GenericArgument::Type(t)), Some(GenericArgument::Type(e))) =
+                    (args.args.first(), args.args.last())
+                else {
+                    return value;
+                };
+                ReturnKind::Result {
+                    t: t.clone(),
+                    e: e.clone(),
                 }
             }
+            // A `foo::Result<T>` - we guess this probably is `std::result::Result<T, foo::Error>`
+            // This allows, eg, `anyhow::Result<>` to work.
+            PathArguments::AngleBracketed(args) if args.args.len() == 1 => {
+                let Some(GenericArgument::Type(t)) = args.args.first() else {
+                    return value;
+                };
+                let mut inferred_e = *ty.clone();
+                let Type::Path(p) = &mut inferred_e else {
+                    return value;
+                };
+                let Some(ref mut seg) = p.path.segments.last_mut() else {
+                    return value;
+                };
+                seg.ident = Ident::new("Error", t.span());
+                ReturnKind::Result {
+                    t: t.clone(),
+                    e: inferred_e,
+                }
+            }
+            _ => value,
         }
     }
+}
 
-    false
+// Must be some expressive way to represent this stuff?
+fn type_is_arc(e: &Type) -> bool {
+    let Type::Path(e_path) = &e else {
+        return false;
+    };
+    matches!(e_path.path.segments.last(), Some(last_err_seg) if last_err_seg.ident == "Arc")
 }
 
 #[derive(Debug)]

@@ -22,4 +22,9 @@ pub fn return_option_result() -> Option<Result<(), ErrorType>> {
     Some(Ok(()))
 }
 
+#[uniffi::export(E = ErrorType)]
+pub fn return_not_error_type() -> () {
+    ()
+}
+
 uniffi_macros::setup_scaffolding!();
