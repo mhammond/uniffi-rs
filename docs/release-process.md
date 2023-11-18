@@ -23,9 +23,11 @@ Steps:
 
 1. Decide on a new version number for `uniffi` crate.  Since we are pre-`1.0`, if there are breaking
    changes then this should be a minor version bump, otherwise a patch version bump.
+   Note that the release process below will automatically update `uniffi/Cargo.toml`
 
 1. Decide on a new version number for the other `uniffi_*` crates.  Our current
    policy is to keep all of these version numbers in sync.
+   Note that the release process below will automatically update all other `Cargo.toml`s.
 
 1. Identify the branch for the release. We typically use a single branch for all point releases,
    so it should be named something like `release-v0.6.x`. This also means that if you are making a point release, the branch
