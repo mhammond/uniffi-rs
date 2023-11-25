@@ -58,3 +58,10 @@ pub trait CallbackTest {
 }
 
 uniffi::include_scaffolding!("docstring");
+
+/// <docstring-procmacro-enum>
+#[derive(Debug, uniffi::Enum)]
+enum PEnumTest {
+    One,
+    Two,
+}

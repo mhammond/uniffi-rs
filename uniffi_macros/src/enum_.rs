@@ -1,13 +1,34 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Data, DataEnum, DeriveInput, Field, Index};
+use syn::{Attribute, Data, DataEnum, DeriveInput, Expr, Field, Index, Lit};
 
 use crate::util::{
     create_metadata_items, derive_all_ffi_traits, ident_to_string, mod_path, tagged_impl_header,
     try_metadata_value_from_usize, try_read_field,
 };
 
+// XXX - move this to util::?
+fn get_docstring(attrs: &Vec<Attribute>) -> String {
+    let docs = attrs
+        .iter()
+        .filter_map(|attr| {
+            if let syn::Meta::NameValue(mnv) = &attr.meta {
+                if mnv.path.is_ident("doc") {
+                    if let Expr::Lit(el) = &mnv.value {
+                        if let Lit::Str(ls) = &el.lit {
+                            return Some(ls.value().trim().to_string());
+                        }
+                    }
+                }
+            }
+            None
+        })
+        .collect::<Vec<String>>();
+    docs.join("\n")
+}
+
 pub fn expand_enum(input: DeriveInput, udl_mode: bool) -> syn::Result<TokenStream> {
+    let docstring = get_docstring(&input.attrs);
     let enum_ = match input.data {
         Data::Enum(e) => e,
         _ => {
@@ -21,7 +42,8 @@ pub fn expand_enum(input: DeriveInput, udl_mode: bool) -> syn::Result<TokenStrea
     let ffi_converter_impl = enum_ffi_converter_impl(ident, &enum_, udl_mode);
 
     let meta_static_var = (!udl_mode).then(|| {
-        enum_meta_static_var(ident, &enum_).unwrap_or_else(syn::Error::into_compile_error)
+        enum_meta_static_var(ident, &enum_, docstring)
+            .unwrap_or_else(syn::Error::into_compile_error)
     });
 
     Ok(quote! {
@@ -136,7 +158,11 @@ fn write_field(f: &Field) -> TokenStream {
     }
 }
 
-pub(crate) fn enum_meta_static_var(ident: &Ident, enum_: &DataEnum) -> syn::Result<TokenStream> {
+pub(crate) fn enum_meta_static_var(
+    ident: &Ident,
+    enum_: &DataEnum,
+    docstring: String,
+) -> syn::Result<TokenStream> {
     let name = ident_to_string(ident);
     let module_path = mod_path()?;
 
@@ -144,6 +170,7 @@ pub(crate) fn enum_meta_static_var(ident: &Ident, enum_: &DataEnum) -> syn::Resu
         ::uniffi::MetadataBuffer::from_code(::uniffi::metadata::codes::ENUM)
             .concat_str(#module_path)
             .concat_str(#name)
+            .concat_str(#docstring)
     };
     metadata_expr.extend(variant_metadata(enum_)?);
     Ok(create_metadata_items("enum", &name, metadata_expr, None))

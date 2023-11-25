@@ -50,3 +50,6 @@ assert RecordTest.__doc__ == "<docstring-record>"
 # Test callbacks
 assert CallbackTest.__doc__ == "<docstring-callback>"
 assert CallbackTest.test.__doc__ == "<docstring-callback-method>"
+
+# Procmacros
+assert PEnumTest.__doc__ == "<docstring-procmacro-enum>"

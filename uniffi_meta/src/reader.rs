@@ -15,6 +15,10 @@ pub fn read_metadata_type(data: &[u8]) -> Result<Type> {
     MetadataReader::new(data).read_type()
 }
 
+fn string_to_option(s: String) -> Option<String> {
+    (!s.is_empty()).then_some(s)
+}
+
 /// Helper struct for read_metadata()
 struct MetadataReader<'a> {
     // This points to the initial data we were passed in
@@ -270,6 +274,7 @@ impl<'a> MetadataReader<'a> {
     fn read_enum(&mut self, is_flat_error: bool) -> Result<EnumMetadata> {
         let module_path = self.read_string()?;
         let name = self.read_string()?;
+        let docstring = string_to_option(self.read_string()?);
         let variants = if is_flat_error {
             self.read_flat_variants()?
         } else {
@@ -280,7 +285,7 @@ impl<'a> MetadataReader<'a> {
             module_path,
             name,
             variants,
-            docstring: None,
+            docstring,
         })
     }
 
