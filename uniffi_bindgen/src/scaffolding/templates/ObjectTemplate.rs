@@ -10,9 +10,8 @@
 // in the UDL, then the rust compiler will complain with a (hopefully at least somewhat helpful!)
 // error message when processing this generated code.
 
-{%- match obj.imp() -%}
-{%- when ObjectImpl::Trait %}
-#[::uniffi::export_for_udl]
+{%- if obj.is_trait_interface() %}
+#[::uniffi::export_for_udl{% if obj.has_callback_interface() %}(with_callback_interface){% endif %}]
 pub trait r#{{ obj.name() }} {
     {%- for meth in obj.methods() %}
     fn {% if meth.is_async() %}async {% endif %}r#{{ meth.name() }}(
@@ -29,7 +28,7 @@ pub trait r#{{ obj.name() }} {
     {%- endmatch %}
     {% endfor %}
 }
-{% when ObjectImpl::Struct %}
+{%- else %}
 {%- for tm in obj.uniffi_traits() %}
 {%      match tm %}
 {%          when UniffiTrait::Debug { fmt }%}
@@ -86,4 +85,4 @@ impl {{ obj.rust_name() }} {
 }
 {%- endfor %}
 
-{% endmatch %}
+{% endif %}

@@ -471,6 +471,15 @@ mod test_function_metadata {
         }
     }
 
+    #[uniffi::export(with_callback_interface)]
+    pub trait TraitWithCallbackInterface: Send + Sync {
+        fn test_method(&self, a: String, b: u32) -> String;
+    }
+
+    #[allow(unused)]
+    #[uniffi::export]
+    fn input_trait_with_callback_interface(val: Arc<dyn TraitWithCallbackInterface>) {}
+
     #[test]
     fn test_function() {
         check_metadata(
@@ -680,20 +689,48 @@ mod test_function_metadata {
     }
 
     #[test]
-    fn test_trait_result() {
+    fn test_trait_metadata() {
+        check_metadata(
+            &UNIFFI_META_UNIFFI_FIXTURE_METADATA_INTERFACE_CALCULATORDISPLAY,
+            ObjectMetadata {
+                module_path: "uniffi_fixture_metadata".into(),
+                name: "CalculatorDisplay".into(),
+                imp: ObjectImpl::Trait,
+                docstring: None,
+            },
+        );
+    }
+
+    #[test]
+    fn test_trait_with_callback_interface_metadata() {
+        check_metadata(
+            &UNIFFI_META_UNIFFI_FIXTURE_METADATA_INTERFACE_TRAITWITHCALLBACKINTERFACE,
+            ObjectMetadata {
+                module_path: "uniffi_fixture_metadata".into(),
+                name: "TraitWithCallbackInterface".into(),
+                imp: ObjectImpl::CallbackTrait,
+                docstring: None,
+            },
+        );
+    }
+
+    #[test]
+    fn test_trait_type_data() {
         check_metadata(
             &UNIFFI_META_UNIFFI_FIXTURE_METADATA_METHOD_CALCULATOR_GET_DISPLAY,
             MethodMetadata {
-                module_path: "uniffi_fixture_metadata".into(),
-                self_name: "Calculator".into(),
-                name: "get_display".into(),
-                is_async: false,
-                inputs: vec![],
+                // The main point of this test is to check the `Type` value for a trait interface
                 return_type: Some(Type::Object {
                     module_path: "uniffi_fixture_metadata".into(),
                     name: "CalculatorDisplay".into(),
                     imp: ObjectImpl::Trait,
                 }),
+                // We might as well test other fields too though
+                module_path: "uniffi_fixture_metadata".into(),
+                self_name: "Calculator".into(),
+                name: "get_display".into(),
+                is_async: false,
+                inputs: vec![],
                 throws: None,
                 takes_self_by_arc: false,
                 checksum: Some(
@@ -723,6 +760,34 @@ mod test_function_metadata {
                 takes_self_by_arc: false,
                 checksum: Some(UNIFFI_META_CONST_UNIFFI_FIXTURE_METADATA_METHOD_CALCULATORDISPLAY_DISPLAY_RESULT
                     .checksum()),
+                docstring: None,
+            },
+        );
+    }
+
+    #[test]
+    fn test_trait_with_callback_interface_type_data() {
+        check_metadata(
+            &UNIFFI_META_UNIFFI_FIXTURE_METADATA_FUNC_INPUT_TRAIT_WITH_CALLBACK_INTERFACE,
+            FnMetadata {
+                inputs: vec![
+                    // The main point of this test is to check the `Type` value for a trait interface
+                    FnParamMetadata::simple("val", Type::Object {
+                        module_path: "uniffi_fixture_metadata".into(),
+                        name: "TraitWithCallbackInterface".into(),
+                        imp: ObjectImpl::CallbackTrait,
+                    }),
+                ],
+                // We might as well test other fields too though
+                return_type: None,
+                module_path: "uniffi_fixture_metadata".into(),
+                name: "input_trait_with_callback_interface".into(),
+                is_async: false,
+                throws: None,
+                checksum: Some(
+                    UNIFFI_META_CONST_UNIFFI_FIXTURE_METADATA_FUNC_INPUT_TRAIT_WITH_CALLBACK_INTERFACE
+                        .checksum(),
+                ),
                 docstring: None,
             },
         );

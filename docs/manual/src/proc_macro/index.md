@@ -89,6 +89,13 @@ trait MyTrait {
     // ...
 }
 
+// Corresponding UDL:
+// [TraitWithCallbackInterface]
+// interface MyTrait {};
+#[uniffi::export(with_callback_interface)]
+trait MyTrait {
+    // ...
+}
 ```
 
 

@@ -56,14 +56,32 @@ impl Unused {
 
 #[uniffi::export]
 pub trait Trait: Send + Sync {
-    fn name(&self) -> String;
+    // Test the absence of `with_callback_interface` by inputting reference arguments, which is
+    // incompatible with callback interfaces
+    //
+    // TODO: Implement LiftRef for str and change the param types to `&str`
+    #[allow(clippy::ptr_arg)]
+    fn concat_strings(&self, a: &String, b: &String) -> String;
 }
 
 struct TraitImpl {}
 
 impl Trait for TraitImpl {
+    fn concat_strings(&self, a: &String, b: &String) -> String {
+        format!("{a}{b}")
+    }
+}
+
+#[uniffi::export(with_callback_interface)]
+pub trait TraitWithCallbackInterface: Send + Sync {
+    fn name(&self) -> String;
+}
+
+struct TraitWithCallbackInterfaceImpl {}
+
+impl TraitWithCallbackInterface for TraitWithCallbackInterfaceImpl {
     fn name(&self) -> String {
-        "TraitImpl".to_string()
+        "TraitWithCallbackInterfaceImpl".to_string()
     }
 }
 
@@ -97,6 +115,13 @@ impl Object {
         inc.unwrap_or_else(|| Arc::new(TraitImpl {}))
     }
 
+    fn get_trait_with_callback_interface(
+        &self,
+        inc: Option<Arc<dyn TraitWithCallbackInterface>>,
+    ) -> Arc<dyn TraitWithCallbackInterface> {
+        inc.unwrap_or_else(|| Arc::new(TraitWithCallbackInterfaceImpl {}))
+    }
+
     fn take_error(&self, e: BasicError) -> u32 {
         assert!(matches!(e, BasicError::InvalidInput));
         42
@@ -104,8 +129,8 @@ impl Object {
 }
 
 #[uniffi::export]
-fn get_trait_name_by_ref(t: &dyn Trait) -> String {
-    t.name()
+fn concat_strings_by_ref(t: &dyn Trait, a: &String, b: &String) -> String {
+    t.concat_strings(a, b)
 }
 
 #[uniffi::export]
@@ -258,6 +283,12 @@ fn get_object(o: Option<Arc<Object>>) -> Arc<Object> {
 
 fn get_trait(o: Option<Arc<dyn Trait>>) -> Arc<dyn Trait> {
     o.unwrap_or_else(|| Arc::new(TraitImpl {}))
+}
+
+fn get_trait_with_callback_interface(
+    o: Option<Arc<dyn TraitWithCallbackInterface>>,
+) -> Arc<dyn TraitWithCallbackInterface> {
+    o.unwrap_or_else(|| Arc::new(TraitWithCallbackInterfaceImpl {}))
 }
 
 #[derive(Default)]

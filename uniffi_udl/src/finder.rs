@@ -142,6 +142,11 @@ impl TypeFinder for weedle::TypedefDefinition<'_> {
                     name,
                     imp: ObjectImpl::Trait,
                 },
+                Some(RustKind::CallbackTrait) => Type::Object {
+                    module_path,
+                    name,
+                    imp: ObjectImpl::CallbackTrait,
+                },
                 Some(RustKind::Record) => Type::Record { module_path, name },
                 Some(RustKind::Enum) => Type::Enum { module_path, name },
                 Some(RustKind::CallbackInterface) => Type::CallbackInterface { module_path, name },

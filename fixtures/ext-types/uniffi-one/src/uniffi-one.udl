@@ -15,7 +15,7 @@ interface UniffiOneInterface {
     i32 increment();
 };
 
-[Trait]
+[TraitWithCallbackInterface]
 interface UniffiOneUDLTrait {
     string hello();
 };

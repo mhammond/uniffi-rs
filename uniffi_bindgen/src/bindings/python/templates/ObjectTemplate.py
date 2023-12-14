@@ -1,3 +1,4 @@
+# IMP: {{ "{:?}"|format(obj.imp()) }}
 {%- let obj = ci|get_object_definition(name) %}
 {%- let (protocol_name, impl_name) = obj|object_names %}
 {%- let methods = obj.methods() %}
@@ -75,7 +76,7 @@ class {{ impl_name }}:
 {%      endmatch %}
 {% endfor %}
 
-{%- if obj.is_trait_interface() %}
+{%- if obj.has_callback_interface() %}
 {%- let callback_handler_class = format!("UniffiCallbackInterface{}", name) %}
 {%- let callback_handler_obj = format!("uniffiCallbackInterface{}", name) %}
 {%- let ffi_init_callback = obj.ffi_init_callback() %}
@@ -83,7 +84,7 @@ class {{ impl_name }}:
 {%- endif %}
 
 class {{ ffi_converter_name }}:
-    {%- if obj.is_trait_interface() %}
+    {%- if obj.has_callback_interface() %}
     _handle_map = ConcurrentHandleMap()
     {%- endif %}
 
@@ -93,7 +94,7 @@ class {{ ffi_converter_name }}:
 
     @staticmethod
     def check_lower(value: {{ type_name }}):
-        {%- if obj.is_trait_interface() %}
+        {%- if obj.has_callback_interface() %}
         pass
         {%- else %}
         if not isinstance(value, {{ impl_name }}):
@@ -102,14 +103,13 @@ class {{ ffi_converter_name }}:
 
     @staticmethod
     def lower(value: {{ protocol_name }}):
-        {%- match obj.imp() %}
-        {%- when ObjectImpl::Struct %}
+        {%- if obj.has_callback_interface() %}
+        return {{ ffi_converter_name }}._handle_map.insert(value)
+        {%- else %}
         if not isinstance(value, {{ impl_name }}):
             raise TypeError("Expected {{ impl_name }} instance, {} found".format(type(value).__name__))
         return value._uniffi_clone_pointer()
-        {%- when ObjectImpl::Trait %}
-        return {{ ffi_converter_name }}._handle_map.insert(value)
-        {%- endmatch %}
+        {%- endif %}
 
     @classmethod
     def read(cls, buf: _UniffiRustBuffer):

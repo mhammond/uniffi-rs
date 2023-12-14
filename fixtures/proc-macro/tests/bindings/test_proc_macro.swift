@@ -22,9 +22,13 @@ let obj2 = Object()
 assert(obj.isOtherHeavy(other: obj2) == .uncertain)
 
 let traitImpl = obj.getTrait(inc: nil)
-assert(traitImpl.name() == "TraitImpl")
-assert(obj.getTrait(inc: traitImpl).name() == "TraitImpl")
-assert(getTraitNameByRef(t: traitImpl) == "TraitImpl")
+assert(traitImpl.concatStrings(a: "foo", b: "bar") == "foobar")
+assert(obj.getTrait(inc: traitImpl).concatStrings(a: "foo", b: "bar") == "foobar")
+assert(concatStringsByRef(t: traitImpl, a: "foo", b: "bar") == "foobar")
+
+let traitImpl2 = obj.getTraitWithCallbackInterface(inc: nil)
+assert(traitImpl2.name() == "TraitWithCallbackInterfaceImpl")
+assert(obj.getTraitWithCallbackInterface(inc: traitImpl2).name() == "TraitWithCallbackInterfaceImpl")
 
 assert(enumIdentity(value: .true) == .true)
 

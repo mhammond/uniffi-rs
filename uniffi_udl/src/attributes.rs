@@ -44,6 +44,8 @@ pub(super) enum Attribute {
     Custom,
     // The interface described is implemented as a trait.
     Trait,
+    // The interface described is implemented as a trait with callback interface support
+    CallbackTrait,
     Async,
 }
 
@@ -52,6 +54,7 @@ pub(super) enum Attribute {
 #[derive(Debug, Copy, Clone, Checksum)]
 pub(super) enum RustKind {
     Object,
+    CallbackTrait,
     Trait,
     Record,
     Enum,
@@ -82,6 +85,7 @@ impl TryFrom<&weedle::attribute::ExtendedAttribute<'_>> for Attribute {
                 "Error" => Ok(Attribute::Error),
                 "Custom" => Ok(Attribute::Custom),
                 "Trait" => Ok(Attribute::Trait),
+                "TraitWithCallbackInterface" => Ok(Attribute::CallbackTrait),
                 "Async" => Ok(Attribute::Async),
                 _ => anyhow::bail!("ExtendedAttributeNoArgs not supported: {:?}", (attr.0).0),
             },
@@ -170,6 +174,7 @@ fn rust_kind_from_id_or_string(nm: &weedle::attribute::IdentifierOrString<'_>) -
             "enum" => RustKind::Enum,
             "trait" => RustKind::Trait,
             "callback" => RustKind::CallbackInterface,
+            "trait_with_callback_interface" => RustKind::CallbackTrait,
             _ => anyhow::bail!("Unknown `[Rust=]` kind {:?}", str_lit.0),
         },
         weedle::attribute::IdentifierOrString::Identifier(_) => {
@@ -348,11 +353,14 @@ impl InterfaceAttributes {
     }
 
     pub fn object_impl(&self) -> ObjectImpl {
-        if self.0.iter().any(|attr| matches!(attr, Attribute::Trait)) {
-            ObjectImpl::Trait
-        } else {
-            ObjectImpl::Struct
+        for attr in self.0.iter() {
+            match attr {
+                Attribute::Trait => return ObjectImpl::Trait,
+                Attribute::CallbackTrait => return ObjectImpl::CallbackTrait,
+                _ => continue,
+            }
         }
+        ObjectImpl::Struct
     }
     pub fn get_traits(&self) -> Vec<String> {
         self.0
@@ -374,6 +382,7 @@ impl TryFrom<&weedle::attribute::ExtendedAttributeList<'_>> for InterfaceAttribu
             Attribute::Enum => Ok(()),
             Attribute::Error => Ok(()),
             Attribute::Trait => Ok(()),
+            Attribute::CallbackTrait => Ok(()),
             Attribute::Traits(_) => Ok(()),
             _ => bail!(format!("{attr:?} not supported for interface definition")),
         })?;

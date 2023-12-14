@@ -6,7 +6,7 @@ namespace traits {
 };
 
 // This is a trait in Rust.
-[Trait]
+[TraitWithCallbackInterface]
 interface Button {
     string name();
 };

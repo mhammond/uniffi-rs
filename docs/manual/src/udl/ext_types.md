@@ -37,6 +37,6 @@ namespace app {
 ```
 
 Supported values:
-*  "enum", "trait", "callback"
+*  "enum", "trait", "callback", "trait_with_callback_interface"
 * For records, either "record" or "dictionary"
 * For objects, either "object" or "interface"

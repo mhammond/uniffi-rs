@@ -11,6 +11,7 @@ use syn::{
 pub struct ExportAttributeArguments {
     pub(crate) async_runtime: Option<AsyncRuntime>,
     pub(crate) callback_interface: Option<kw::callback_interface>,
+    pub(crate) with_callback_interface: Option<kw::with_callback_interface>,
     pub(crate) constructor: Option<kw::constructor>,
     // tried to make this a vec but that got messy quickly...
     pub(crate) trait_debug: Option<kw::Debug>,
@@ -38,6 +39,11 @@ impl UniffiAttributeArgs for ExportAttributeArguments {
         } else if lookahead.peek(kw::callback_interface) {
             Ok(Self {
                 callback_interface: input.parse()?,
+                ..Self::default()
+            })
+        } else if lookahead.peek(kw::with_callback_interface) {
+            Ok(Self {
+                with_callback_interface: input.parse()?,
                 ..Self::default()
             })
         } else if lookahead.peek(kw::constructor) {
@@ -71,18 +77,29 @@ impl UniffiAttributeArgs for ExportAttributeArguments {
     }
 
     fn merge(self, other: Self) -> syn::Result<Self> {
-        Ok(Self {
+        let merged = Self {
             async_runtime: either_attribute_arg(self.async_runtime, other.async_runtime)?,
             callback_interface: either_attribute_arg(
                 self.callback_interface,
                 other.callback_interface,
+            )?,
+            with_callback_interface: either_attribute_arg(
+                self.with_callback_interface,
+                other.with_callback_interface,
             )?,
             constructor: either_attribute_arg(self.constructor, other.constructor)?,
             trait_debug: either_attribute_arg(self.trait_debug, other.trait_debug)?,
             trait_display: either_attribute_arg(self.trait_display, other.trait_display)?,
             trait_hash: either_attribute_arg(self.trait_hash, other.trait_hash)?,
             trait_eq: either_attribute_arg(self.trait_eq, other.trait_eq)?,
-        })
+        };
+        if merged.callback_interface.is_some() && merged.with_callback_interface.is_some() {
+            return Err(syn::Error::new(
+                merged.callback_interface.unwrap().span,
+                "`callback_interface` and `with_callback_interface` are mutually exclusive",
+            ));
+        }
+        Ok(merged)
     }
 }
 

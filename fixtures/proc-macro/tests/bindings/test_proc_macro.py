@@ -21,9 +21,13 @@ obj2 = Object()
 assert obj.is_other_heavy(obj2) == MaybeBool.UNCERTAIN
 
 trait_impl = obj.get_trait(None)
-assert trait_impl.name() == "TraitImpl"
-assert obj.get_trait(trait_impl).name() == "TraitImpl"
-assert get_trait_name_by_ref(trait_impl) == "TraitImpl"
+assert trait_impl.concat_strings("foo", "bar") == "foobar"
+assert obj.get_trait(trait_impl).concat_strings("foo", "bar") == "foobar"
+assert concat_strings_by_ref(trait_impl, "foo", "bar") == "foobar"
+
+trait_impl2 = obj.get_trait_with_callback_interface(None)
+assert trait_impl2.name() == "TraitWithCallbackInterfaceImpl"
+assert obj.get_trait_with_callback_interface(trait_impl2).name() == "TraitWithCallbackInterfaceImpl"
 
 assert enum_identity(MaybeBool.TRUE) == MaybeBool.TRUE
 
@@ -88,7 +92,7 @@ call_callback_interface(PyTestCallbackInterface())
 assert get_one(None).inner == 0
 assert get_bool(None) == MaybeBool.UNCERTAIN
 assert get_object(None).is_heavy() == MaybeBool.UNCERTAIN
-assert get_trait(None).name() == "TraitImpl"
+assert get_trait_with_callback_interface(None).name() == "TraitWithCallbackInterfaceImpl"
 assert get_externals(None).one is None
 
 # values for enums without an explicit value are their index.
