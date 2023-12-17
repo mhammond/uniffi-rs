@@ -81,7 +81,8 @@ impl ErrorThrower {
 mod trait_result {
     use super::*;
 
-    // doesn't work
+    // doesn't work - broken as we try and implement the trait for callbacks
+    // which doesn't make sense in this model.
     #[uniffi::export(E = Arc<ErrorInterface>)]
     trait TraitThrower: Send + Sync {
         fn throw(&self) -> anyhow::Result<()> {

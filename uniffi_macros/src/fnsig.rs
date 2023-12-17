@@ -143,6 +143,7 @@ impl FnSignature {
         })
     }
 
+    // The return type for the FFI implementation.
     pub fn ffi_return_ty(&self) -> syn::Result<TokenStream> {
         Ok(match &self.return_kind {
             ReturnKind::Void => quote! { () },
@@ -150,6 +151,18 @@ impl FnSignature {
             ReturnKind::Result { t, e } => {
                 let actual_e = self.ffi_custom_err.as_ref().unwrap_or(e).to_token_stream();
                 quote! { ::std::result::Result<#t, #actual_e> }
+            }
+        })
+    }
+
+    // The return type for the function implementation - which may differ from that of
+    // FFI implementation due to error mapping.
+    pub fn impl_return_ty(&self) -> syn::Result<TokenStream> {
+        Ok(match &self.return_kind {
+            ReturnKind::Void => quote! { () },
+            ReturnKind::Value { t } => t.to_token_stream(),
+            ReturnKind::Result { t, e } => {
+                quote! { ::std::result::Result<#t, #e> }
             }
         })
     }
@@ -558,6 +571,7 @@ impl ReturnKind {
                     return value;
                 };
                 seg.ident = Ident::new("Error", t.span());
+                seg.arguments = PathArguments::None;
                 ReturnKind::Result {
                     t: t.clone(),
                     e: inferred_e,

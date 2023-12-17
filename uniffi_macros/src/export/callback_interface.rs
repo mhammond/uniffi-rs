@@ -164,7 +164,7 @@ fn gen_method_impl(sig: &FnSignature, internals_ident: &Ident) -> syn::Result<To
     let params = sig.params();
     let buf_ident = Ident::new("uniffi_args_buf", Span::call_site());
     let write_exprs = sig.write_exprs(&buf_ident);
-    let return_ty = sig.ffi_return_ty()?;
+    let return_ty = sig.impl_return_ty()?;
 
     Ok(quote! {
         fn #ident(#self_param, #(#params),*) -> #return_ty {
