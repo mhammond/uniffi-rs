@@ -83,7 +83,6 @@ impl FnSignature {
         ffi_custom_err: &Option<Type>,
         docstring: String,
     ) -> syn::Result<Self> {
-        let return_kind = ReturnKind::from_return_type(&sig.output);
         let is_async = sig.asyncness.is_some();
 
         if is_async && matches!(kind, FnKind::Constructor { .. }) {
@@ -126,7 +125,7 @@ impl FnSignature {
             is_async,
             receiver,
             args,
-            return_kind,
+            return_kind: sig.output.into(),
             ffi_custom_err: ffi_custom_err.clone(),
             docstring,
         })
@@ -530,13 +529,13 @@ enum ReturnKind {
     Value { t: Type },
 }
 
-impl ReturnKind {
-    fn from_return_type(return_type: &ReturnType) -> Self {
+impl From<ReturnType> for ReturnKind {
+    fn from(return_type: ReturnType) -> Self {
         let ReturnType::Type(_, ty) = return_type else {
             return ReturnKind::Void;
         };
         let value = ReturnKind::Value { t: *ty.clone() }; // default fallback value
-        let Type::Path(p) = &**ty else {
+        let Type::Path(p) = &*ty else {
             return value;
         };
         let seg = match p.path.segments.last() {

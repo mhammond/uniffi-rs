@@ -93,8 +93,7 @@ mod trait_result {
 
 #[cfg(feature = "trait-impl")]
 mod trait_impl {
-    // for foreign traits to be able to implement the trait,
-    // it must have a trait for an error!
+    // foreign traits might use another trait to represent error values.
     #[uniffi::export]
     pub trait ErrorTrait: Send + Sync + std::error::Error {
         fn message(&self) -> String;
