@@ -3,19 +3,31 @@
 UniFFI uses handles to pass Rust objects across the FFI to the foreign code.
 The handles point to an entry inside a `HandleMap`
 
-## HandleMap
+## Definitions
 
-A `HandleMap` is a `Vec` where each item is either:
+### Handle
+
+A `Handle` is a 64-bit integer, segmented as follows:
+- Bits 0-32: `Vec` index
+- Bit 32: foreign bit that's set for handles for foreign objects, but not Rust objects.
+  This allows us to differentiate trait interface implementations.
+- Bits 33-40: map id -- a unique value that corresponds to the map that generated the handle
+- Bits 40-48: generation counter
+- Bits 48-64: unused
+
+
+### HandleMap
+
+A `HandleMap` is a `Vec`, with a limit of 2^32 entries of 64bit integers. Each entry is either:
 
 - **Occupied**
-  - The foreign side holds a handle that's associated with the entry.
-  - Stores a `T` value (typically an `Arc<>`).
-  - Stores a `generation` counter used to detect use-after-free bugs
-  - Stores a `map-id` value used to detect handles used with the wrong `HandleMap`
+  - The foreign side holds a handle that's associated with the entry. The lower 32 bits are zero with the upper 32bits of the 64bit handle held by the foreign side.
 - **Vacant**
   - Each vacant entry stores the index of the next vacant entry.
     These form a linked-list of available entries and allow us to quickly allocate a new entry in the `HandleMap`
-  - Stores the `generation` counter value from the last time it was occupied, or 0 if it was never occupied.
+  - Stores some of the 
+  
+  the `generation` counter value from the last time it was occupied, or 0 if it was never occupied.
 
 Furthermore, each `HandleMap` stores its own `next` value, which points to the first vacant entry on the free list.
 The value u32::MAX indicates indicates there is no next item and is represented by the `EOL` const.
