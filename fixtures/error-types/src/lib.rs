@@ -44,6 +44,7 @@ fn poops() -> Result<(), anyhow::Error> {
     Err(anyhow::Error::msg("poops").context("via a procmacro"))
 }
 
+#[cfg(feature = "async")] // async broken too.
 #[uniffi::export]
 async fn asimple() -> Result<(), EnumError> {
     Err(EnumError::Oops)

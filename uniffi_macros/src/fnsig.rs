@@ -169,11 +169,12 @@ impl FnSignature {
     // Tokens after the call to the exported functions to map the error type.
     pub fn map_err(&self) -> Option<TokenStream> {
         match &self.return_kind {
-            ReturnKind::Result { .. } => {
+            ReturnKind::Result { e, .. } => {
                 let map_arc = self.ffi_custom_err.as_ref().map(|new_e| {
                     type_is_arc(&new_e).then(|| quote! { .map_err(::std::sync::Arc::new) })
                 });
-                Some(quote! { .map_err(::std::convert::Into::into) #map_arc })
+                let ffi_e = self.ffi_custom_err.as_ref().unwrap_or(e);
+                Some(quote! { .map_err(::std::convert::Into::<#ffi_e>::into) #map_arc })
             }
             _ => None,
         }

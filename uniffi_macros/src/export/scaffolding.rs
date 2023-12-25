@@ -236,7 +236,7 @@ pub(super) fn gen_ffi_function(
             }
         }
     } else {
-        // XXX - error mapping not implemented - see `#[cfg(feature = "async")]` in the error-types fixture.
+        let impl_return_ty = sig.impl_return_ty()?;
         let mut future_expr = quote! { #rust_fn_call };
         if matches!(arguments.async_runtime, Some(AsyncRuntime::Tokio(_))) {
             future_expr = quote! { ::uniffi::deps::async_compat::Compat::new(#future_expr) }
@@ -252,8 +252,10 @@ pub(super) fn gen_ffi_function(
                     Ok(uniffi_args) => {
                         ::uniffi::rust_future_new(
                             async move {
-                                // XXX - hack to try and work out what's going on here!
-                                let x: #return_impl::ReturnType = #future_expr.await  #map_err; x },
+                                // must provide types
+                                let r: #impl_return_ty = #future_expr.await;
+                                r #map_err
+                            },
                             crate::UniFfiTag
                         )
                     },
