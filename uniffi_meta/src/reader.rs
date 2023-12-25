@@ -329,7 +329,7 @@ impl<'a> MetadataReader<'a> {
                 ErrorMetadata::Enum { enum_, is_flat }
             }
             codes::TYPE_INTERFACE => {
-                let ob = self.read_object()?;
+                let ob = self.read_object(ObjectImpl::Struct)?; //????
                 ErrorMetadata::Object { ob }
             }
             _ => bail!("Unsupported type code for error: {err_type_code}"),

@@ -39,12 +39,8 @@ impl ExportItem {
                 let sig = FnSignature::new_function(item.sig, &args.e, docstring)?;
                 Ok(Self::Function { sig })
             }
-            syn::Item::Impl(item) => Self::from_impl(item, args.constructor.is_some()),
-            syn::Item::Trait(item) => Self::from_trait(
-                item,
-                args.callback_interface.is_some() || args.with_callback_interface.is_some(),
-                args.callback_interface.is_some(),
-            ),
+            syn::Item::Impl(item) => Self::from_impl(item, args),
+            syn::Item::Trait(item) => Self::from_trait(item, args),
             syn::Item::Struct(item) => Self::from_struct(item, args),
             // FIXME: Support const / static?
             _ => Err(syn::Error::new(
@@ -125,11 +121,10 @@ impl ExportItem {
         })
     }
 
-    fn from_trait(
-        item: syn::ItemTrait,
-        with_callback_interface: bool,
-        callback_interface_only: bool,
-    ) -> syn::Result<Self> {
+    fn from_trait(item: syn::ItemTrait, args: &ExportAttributeArguments) -> syn::Result<Self> {
+        let with_callback_interface =
+            args.callback_interface.is_some() || args.with_callback_interface.is_some();
+        let callback_interface_only = args.callback_interface.is_some();
         if !item.generics.params.is_empty() || item.generics.where_clause.is_some() {
             return Err(syn::Error::new_spanned(
                 &item.generics,
