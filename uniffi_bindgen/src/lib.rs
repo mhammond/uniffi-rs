@@ -180,6 +180,10 @@ impl BindingGenerator for BindingGeneratorDefault {
         config: &Self::Config,
         out_dir: &Utf8Path,
     ) -> Result<()> {
+        anyhow::ensure!(
+            !self.target_languages.is_empty(),
+            "No languages specified, nothing to do."
+        );
         for &language in &self.target_languages {
             bindings::write_bindings(
                 &config.bindings,

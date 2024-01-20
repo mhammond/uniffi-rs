@@ -37,49 +37,44 @@ In a multiple crates workspace, you can create a separate crate for running `uni
 
 Then your can run `uniffi-bindgen` from any create in your project using `cargo run -p uniffi-bindgen [args]`
 
-## Running uniffi-bindgen using a library file (RECOMMENDED)
+`unnif-bindgen` can take as input either a UDL file or a built library file.
 
-Use `generate --library` to generate foreign bindings by using a cdylib file built for your library.
-This flag was added in UniFFI 0.24 and can be more convenient than specifying the UDL file -- especially when multiple UniFFI-ed crates are built together in one library.
-The plan is to make library mode the default in a future UniFFI version, and it is highly recommended to specify the flag for now (because some features simply don't work otherwise).
+A library file is recommended as it supports more scenarios.
 
-Taking `example/arithmetic` as an example, you can generate the bindings with:
+A UDL file means you don't need access to the built binary, but it doesn't support multi-crate
+environments or procmacros. This facility is likely to eventually be deprecated.
+
+
+## Running uniffi-bindgen using a library file
+
+Use `generate --library` and specify the path to the cdylib file built for your library.
+All crates built into the library that use UniFFI will have bindings generated for them.
+
 ```
 cargo build --release
 cargo run --bin uniffi-bindgen generate --library target/release/libarithmetical.so --language kotlin --out-dir out
 ```
 
-Then look in the `out` directory.
+(try also `python` or `swift` for `--language`)
 
-When using library mode, if multiple crates get built into the library that use UniFFI, all will have bindings generated for them.
+Then look in the `out` directory; there will be one file per crate (ie, one file in this example)
 
-Library mode comes with some extra requirements:
-  - It must be run from within the cargo workspace of your project
-  - Each crate must use exactly 1 UDL file when compiling the Rust library.  However, crates can have
-    multiple UDL files as long as they ensure only one is used for any particular build,
-    e.g. by using feature flags.
-  - Rust sources must use `uniffi::include_scaffolding!` to include the scaffolding code.
+This must be run from within your Cargo workspace so it has access to Cargo metadata.
 
 ## Running uniffi-bindgen with a single UDL file
 
+As above, not recommended and may be deprecated.
+
 Use the `generate` command to generate bindings by specifying a UDL file.
 
-### Kotlin
-
-From the `example/arithmetic` directory, run:
 ```
 cargo run --bin uniffi-bindgen generate src/arithmetic.udl --language kotlin
 ```
-then have a look at `src/uniffi/arithmetic/arithmetic.kt`
 
-### Swift
+then have a look at `src/arithmetic.kts`
 
-Run
-```
-cargo run --bin uniffi-bindgen generate src/arithmetic.udl --language swift
-```
-then check out `src/arithmetic.swift`
+## Done
 
-Note that these commands could be integrated as part of your gradle/Xcode build process.
+These commands can be integrated as part of your gradle/Xcode build process.
 
 This is it, you have an MVP integration of UniFFI in your project.
