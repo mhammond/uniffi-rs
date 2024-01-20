@@ -6,9 +6,9 @@ As stated in the [Overview](../Overview.md), this library and tutorial does not 
 
 First, make sure you have installed all the [prerequisites](./Prerequisites.md).
 
-Ideally you would then run the `uniffi-bindgen` binary from the `uniffi` crate to generate your bindings.  However, this
-is only available with [Cargo nightly](https://doc.rust-lang.org/cargo/reference/unstable.html#artifact-dependencies).
-To work around this, you need to create a binary in your project that does the same thing.
+Ideally you would then run the `uniffi-bindgen` binary from the `uniffi` crate to generate your bindings,
+but if not on [Cargo nightly](https://doc.rust-lang.org/cargo/reference/unstable.html#artifact-dependencies),
+you need to create a binary in your project that does the same thing.
 
 Add the following to your `Cargo.toml`:
 
@@ -30,11 +30,10 @@ You can now run `uniffi-bindgen` from your project using `cargo run --features=u
 
 ### Multi-crate workspaces
 
-If your project consists of multiple crates in a Cargo workspace, then the process outlined above would require you
-creating a binary for each crate that uses UniFFI.  You can avoid this by creating a separate crate for running `uniffi-bindgen`:
-  - Name the crate `uniffi-bindgen`
+In a multiple crates workspace, you can create a separate crate for running `uniffi-bindgen`:
+  - Name the crate `uniffi-bindgen`, add it to your workspace.
   - Add this dependency to `Cargo.toml`: `uniffi = {version = "0.XX.0", features = ["cli"] }`
-  - Follow the steps from the previous section to add the `uniffi-bindgen` binary target
+  - As above, add the `uniffi-bindgen` binary target
 
 Then your can run `uniffi-bindgen` from any create in your project using `cargo run -p uniffi-bindgen [args]`
 
@@ -50,7 +49,7 @@ cargo build --release
 cargo run --bin uniffi-bindgen generate --library target/release/libarithmetical.so --language kotlin --out-dir out
 ```
 
-Then check out the `out` directory.
+Then look in the `out` directory.
 
 When using library mode, if multiple crates get built into the library that use UniFFI, all will have bindings generated for them.
 
