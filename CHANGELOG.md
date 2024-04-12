@@ -6,6 +6,10 @@
 
 ## [[UnreleasedUniFFIVersion]] (backend crates: [[UnreleasedBackendVersion]]) - (_[[ReleaseDate]]_)
 
+### What's fixed?
+- Python: Fix custom types generating invalid code when there are forward references.
+  ([#2067](https://github.com/mozilla/uniffi-rs/issues/2067))
+
 ### What's changed?
 - The async runtime can be specified for constructors/methods, this will override the runtime specified at the impl block level.
 
