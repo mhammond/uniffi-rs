@@ -1,5 +1,5 @@
 use custom_types::Handle;
-use ext_types_custom::{Guid, ANestedGuid, Ouid};
+use ext_types_custom::{Guid, ANestedGuid, Ouid, HandleU8};
 use ext_types_external_crate::{
     ExternalCrateDictionary, ExternalCrateInterface, ExternalCrateNonExhaustiveEnum,
 };
@@ -12,6 +12,11 @@ use uniffi_sublib::SubLibType;
 use url::Url;
 
 // #1988
+uniffi::ffi_converter_forward!(
+    ext_types_custom::HandleU8,
+    ext_types_custom::UniFfiTag,
+    crate::UniFfiTag
+);
 uniffi::ffi_converter_forward!(
     ext_types_custom::Ouid,
     ext_types_custom::UniFfiTag,
@@ -118,6 +123,11 @@ fn get_maybe_urls(urls: Vec<Option<Url>>) -> Vec<Option<Url>> {
 #[uniffi::export]
 fn get_imported_ouid(ouid: Ouid) -> Ouid {
     ouid
+}
+
+#[uniffi::export]
+fn get_imported_handle_u8(h: Option<HandleU8>) -> HandleU8 {
+    h.unwrap_or(HandleU8(3))
 }
 
 // external custom types wrapping external custom types.
