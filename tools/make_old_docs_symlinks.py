@@ -44,24 +44,27 @@ redirect_template = r"""
   <meta charset="utf-8">
   <title>Redirecting.</title>
   <noscript>
-    <meta http-equiv="refresh" content="1; url={target}/{path}" />
+    <meta http-equiv="refresh" content="1; url={target}" />
   </noscript>
   <script>
-    window.location.replace("{target}/{path}" + window.location.hash);
+    window.location.replace("{target}" + window.location.hash);
   </script>
 </head>
 <body>
-  Redirecting to <a href="{target}/{path}">{target}/{path}</a>...
+  Redirecting to <a href="{target}">{path}</a>...
 </body>
 </html>
 """
 
 def redirects(args):
-    target = "0.27"
+    target_ver = "0.27"
     for spec in paths.split():
         path = os.path.splitext(os.path.normpath(spec))[0] + ".html"
         fq = os.path.join(args.target, path)
         if os.path.exists(fq):
+            depth = len(path.split("/")) - 1
+            relative_root = "../" * depth
+            target = f"{relative_root}{target_ver}/{path}"
             new_content = redirect_template.format(path=path, target=target)
             open(fq, "w").write(new_content)
             print("Updated", path)
