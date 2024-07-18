@@ -27,7 +27,7 @@
     {%- call async(callable) %}
     {%- call throws(callable) %}
     {%- match callable.return_type() %}
-    {%-  when Some with (return_type) %} -> {{ return_type|type_name }}
+    {%-  when Some with (return_type) %} -> {{ self.type_name(return_type) }}
     {%-  when None %}
     {%- endmatch %} {
     {%- call call_body(callable) %}
@@ -112,7 +112,7 @@ public convenience init(
 
 {% macro arg_list_decl(func) %}
     {%- for arg in func.arguments() -%}
-        {% if config.omit_argument_labels() %}_ {% endif %}{{ arg.name()|var_name }}: {{ arg|type_name -}}
+        {% if config.omit_argument_labels() %}_ {% endif %}{{ arg.name()|var_name }}: {{ self.type_name(arg) -}}
         {%- match arg.default_value() %}
         {%- when Some with(literal) %} = {{ literal|literal_swift(arg) }}
         {%- else %}
@@ -129,10 +129,10 @@ public convenience init(
     {%- for field in item.fields() -%}
         {%- call docstring(field, 8) %}
         {%- if has_nameless_fields %}
-        {{- field|type_name -}}
+        {{- self.type_name(field) -}}
         {%- if !loop.last -%}, {%- endif -%}
         {%- else -%}
-        {{ field.name()|var_name }}: {{ field|type_name -}}
+        {{ field.name()|var_name }}: {{ self.type_name(field) -}}
         {%- match field.default_value() %}
             {%- when Some with(literal) %} = {{ literal|literal_swift(field) }}
             {%- else %}
@@ -152,7 +152,7 @@ v{{- field_num -}}
 
 {% macro arg_list_protocol(func) %}
     {%- for arg in func.arguments() -%}
-        {% if config.omit_argument_labels() %}_ {% endif %}{{ arg.name()|var_name }}: {{ arg|type_name -}}
+        {% if config.omit_argument_labels() %}_ {% endif %}{{ arg.name()|var_name }}: {{ self.type_name(arg) -}}
         {%- if !loop.last %}, {% endif -%}
     {%- endfor %}
 {%- endmacro %}

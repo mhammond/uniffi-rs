@@ -12,7 +12,7 @@ public enum {{ type_name }} {
     {% endfor %}
 }
 {% when Some with (variant_discr_type) %}
-public enum {{ type_name }} : {{ variant_discr_type|type_name }} {
+public enum {{ type_name }} : {{ self.type_name(variant_discr_type) }} {
     {% for variant in e.variants() %}
     {%- call swift::docstring(variant, 4) %}
     case {{ variant.name()|enum_variant_swift_quoted }} = {{ e|variant_discr_literal(loop.index0) }}{% if variant.fields().len() > 0 %}(

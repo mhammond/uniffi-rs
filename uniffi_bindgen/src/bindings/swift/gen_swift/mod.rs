@@ -338,6 +338,10 @@ impl<'a> TypeRenderer<'a> {
         self.imports.borrow_mut().insert(name.to_owned());
         ""
     }
+
+    pub fn type_name(&self, as_type: &impl AsType) -> String {
+        SwiftCodeOracle.find(&as_type.as_type()).type_label()
+    }
 }
 
 /// Template for generating the `.h` file that defines the low-level C FFI.
@@ -411,6 +415,11 @@ impl<'a> SwiftWrapper<'a> {
             .map(|t| SwiftCodeOracle.find(t))
             .filter_map(|ct| ct.initialization_fn())
             .collect()
+    }
+
+    // sad duplication we should kill?
+    pub fn type_name(&self, as_type: &impl AsType) -> String {
+        SwiftCodeOracle.find(&as_type.as_type()).type_label()
     }
 }
 
@@ -583,10 +592,6 @@ pub mod filters {
 
     fn oracle() -> &'static SwiftCodeOracle {
         &SwiftCodeOracle
-    }
-
-    pub fn type_name(as_type: &impl AsType) -> Result<String, askama::Error> {
-        Ok(oracle().find(&as_type.as_type()).type_label())
     }
 
     pub fn return_type_name(as_type: Option<&impl AsType>) -> Result<String, askama::Error> {

@@ -17,7 +17,7 @@ fileprivate struct {{ trait_impl }} {
             {%- endif %}
         ) in
             let makeCall = {
-                () {% if meth.is_async() %}async {% endif %}throws -> {% match meth.return_type() %}{% when Some(t) %}{{ t|type_name }}{% when None %}(){% endmatch %} in
+                () {% if meth.is_async() %}async {% endif %}throws -> {% match meth.return_type() %}{% when Some(t) %}{{ self.type_name(t) }}{% when None %}(){% endmatch %} in
                 guard let uniffiObj = try? {{ ffi_converter_name }}.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
