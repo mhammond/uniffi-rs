@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 // namespace functions.
 pub fn get_traits() -> Vec<Arc<dyn NodeTrait>> {
-    vec![Arc::new(Trait1::default()), Arc::new(Trait2::default())]
+    vec![Arc::new(Trait1::default()), Arc::new(Node::default())]
 }
 
 pub trait NodeTrait: Send + Sync + std::fmt::Debug {
@@ -183,21 +183,54 @@ impl NodeTrait for Trait1 {
     }
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct Trait2 {
+// Like trait1, but is also a uniffi object.
+#[derive(uniffi::Object, Debug, Default)]
+pub struct Node {
+    name: Option<String>,
     parent: Mutex<Option<Arc<dyn NodeTrait>>>,
 }
-impl NodeTrait for Trait2 {
+
+#[uniffi::export]
+impl Node {
+    #[uniffi::constructor]
+    fn new(name: String) -> Self {
+        Self {
+            parent: Mutex::new(Some(Arc::new(Node {
+                name: Some(format!("via {name}")),
+                parent: Mutex::new(None),
+            }))),
+            name: Some(name),
+        }
+    }
+
+    fn describe(&self) -> String {
+        format!(
+            "Node: name={:?}, parent={}",
+            self.name,
+            self.parent.lock().unwrap().is_some()
+        )
+    }
+
+    fn describe_parent(&self) -> String {
+        format!("{:?}", self.parent.lock().unwrap())
+    }
+}
+
+#[uniffi::export]
+impl NodeTrait for Node {
     fn name(&self) -> String {
-        "node-2".to_string()
+        self.name
+            .as_ref()
+            .map(|n| n.clone())
+            .unwrap_or_else(|| "node-2".to_string())
     }
 
     fn set_parent(&self, parent: Option<Arc<dyn NodeTrait>>) {
-        *self.parent.lock().unwrap() = parent.map(|arc| Arc::clone(&arc))
+        *(self.parent.lock().unwrap()) = parent;
     }
 
     fn get_parent(&self) -> Option<Arc<dyn NodeTrait>> {
-        (*self.parent.lock().unwrap()).clone()
+        self.parent.lock().unwrap().clone()
     }
 }
 

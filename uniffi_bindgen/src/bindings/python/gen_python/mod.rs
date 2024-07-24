@@ -288,6 +288,43 @@ impl<'a> TypeRenderer<'a> {
             .map(|(n, t)| (PythonCodeOracle.class_name(n), t))
             .collect()
     }
+
+    // Fetch and sort the objects to avoid forward references. For now
+    // just support simple things, so traits before everything else is ok.
+    fn iter_sorted_object_types(&self) -> impl Iterator<Item = &Type> {
+        let mut obs: Vec<&Type> = self
+            .ci
+            .iter_types()
+            .filter(|t| matches!(t, Type::Object { .. }))
+            .collect();
+        obs.sort_by_key(|t| !matches!(t, Type::Object { imp, .. } if imp.is_trait_interface()));
+        obs.into_iter()
+    }
+
+    // A string with a suitable base-class declaration including parens.
+    // Eg '(Exception)', '(Foo, Bar)', ''
+    fn object_baseclass_decl(&self, ob: &Object) -> String {
+        if self.ci.is_name_used_as_error(ob.name()) {
+            assert!(
+                ob.as_trait_impls().is_empty(),
+                "Don't know what to do with traits and errors!?"
+            );
+            "(Exception)".to_string()
+        } else if !ob.as_trait_impls().is_empty() {
+            let names = ob
+                .as_trait_impls()
+                .iter()
+                .map(|t| match &t.tr_module_path {
+                    Some(p) => [&p.clone(), ".", &t.trait_name].join(""),
+                    None => t.trait_name.clone(),
+                })
+                .collect::<Vec<String>>()
+                .join(", ");
+            format!("({names})")
+        } else {
+            "".to_string()
+        }
+    }
 }
 
 #[derive(Template)]

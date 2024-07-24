@@ -5,11 +5,7 @@
 
 {% include "Protocol.py" %}
 
-{% if ci.is_name_used_as_error(name) %}
-class {{ impl_name }}(Exception):
-{%- else %}
-class {{ impl_name }}:
-{%- endif %}
+class {{ impl_name }}{{ self.object_baseclass_decl(obj) }}:
     {%- call py::docstring(obj, 4) %}
     _pointer: ctypes.c_void_p
 
