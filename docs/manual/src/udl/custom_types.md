@@ -1,88 +1,76 @@
 # Custom types
 
-Custom types allow users to extend the UniFFI type system to support types that normally could not be used in an interface.
+Custom types allow you to create a new type which is implemented over the FFI as another "bridge" type.
+For example, you might have a type named `Url` which has a bridge type `string`, or a `Handle` bridged by an `i64`.
 
-As described in the [Lifting and Lowering](../internals/lifting_and_lowering.html) section, UniFFI passes types across the FFI by *lifting* and *lowering* them.
-For example, when the foreign code wants to make a Rust call:
+Any valid type can be a bridge type - not only builtins, but structs, records, enums etc.
 
-* The generated foreign code *lowers* all argument values to an primitive FFI type.
-* The generated foreign code calls the FFI function with the lowered values
-* The generated Rust code *lifts* the arguments to a Rust type
-* The generated Rust code calls the exported function.
-* The generated Rust code *lowers* the return value of the function and returns that back to the foreign side.
-* The generated foreign code *lifts* the return value and returns that to the consumer code.
+This not only allows using types which otherwise would be impossible over the FFI (eg, `url::Url`), but other interesting "newtype" options to extend the type system.
 
-UniFFI supports many [builtin types](../udl/builtin_types.html) as well as user-defined [structs](..,udl/structs.html), [enumerations](..,udl/enumerations.html), [objects](..,udl/interfaces.html), etc.
+The foreign bindings will treat these types as the bridge type - but they may optionally transform the type. For example, our `Url` has a bridged type of `string` - we could choose for Kotin to either get that as a `String`, or supply a conversion to/from a Kotlin `java.net.URL`.
 
-Custom types allow library authors to extend the type system even further.
-Instead of lifted from/lowered into a primitive FFI type, custom types are lifted from/lowered into a builtin or user-defined types, called a "bridge type".
-This creates a 2-step lifting/lowering process: the custom type is lifted/lowered, then the result is lifted/lowered using the normal logic for the bridge type.
-The foreign bindings will treat these types as the bridge type.
-
-For example, suppose a library uses the `url::Url` type, which can not be lifted/lowered directly by UniFFI.
-The library can define `url::Url` as a custom type, with `String` as the bridge type.
-The generated Rust code will then lower `Url` in 2 steps:
-
-* The `Url` value is lowered to a `String`
-* The `String` value is lowered to a `RustBuffer` (a UniFFI type that stores a utf8 bytes)
-
-The generated Rust code will then lift `Url` using the reverse of those steps.
-
-By default, this type will appear as a string to foreign consumers.
-However, each foreign language can be configured to execute a process, for example by converting the string to a `java.net.URL` in Kotlin.
 This would mean that `Url` would be:
-
 * Represented by the `url::Url` type in Rust
 * Passed across the FFI as a string
 * Represented by the `java.net.URL` type in Kotlin
 
+For terminology, we lean on our existing [lifting and lowering](../internals/lifting_and_lowering.html); in the same way an FFI type is "lifted" into the Rust type, and a Rust type is "lowered" into to FFI, here the bridge type is lifted into our custom type, and our custom type is lowered into the bridge type.
+
+This creates a 2-step lifting/lowering process: our custom type is lifted/lowered to/from the bridge type, then that bridge type lifted/lowered to/from the actual FFI type.
+
+By default, we assume some `Into/From` relationships between the types, but you can also supply conversion closures.
+
 ## Custom types in the scaffolding code
 
-### custom_type!
+### `custom_type!`
 
 Use the `custom_type!` macro to define a new custom type.
 
+The simplest case is for a type with `Into/From` already setup - eg, our `Handle`
+
 ```rust
+/// handle which wraps an integer
+pub struct Handle(i64);
 
-// Some complex struct that can be serialized/deserialized to a string.
-// This example assumes that Into/TryInto are implemented using the
-// serialisation code.
-use some_mod::SerializableStruct;
+// Defining `From<Handle> for i64` also gives us `Into<i64> for Handle`
+impl From<Handle> for i64 {
+    fn from(val: Handle) -> Self {
+        val.0
+    }
+}
 
-// When passing `SerializableStruct` objects to the foreign side, they will
-// be converted to a `String`, then `String` will be used as the bridge type
-// to pass the value across the FFI. Conversely, when objects are passed to
-// Rust, they will be passed across the FFI as a String then converted to
-// `SerializableStruct`.
-uniffi::custom_type!(SerializableStruct, String);
+uniffi::custom_type!(Handle, i64);
 ```
+and `Handle` can be used in Rust, while foreign bindings will use `i64` (or optionally converted, see below)
 
-Default conversions to the bridge type:
+### `custom_type!` conversions
 
-- Values passed to the foreign code will be converted using `Into<String>` then lowered as a `String` value.
-- Values passed to the Rust code will lifted as a `String` then converted using `<String as TryInto<SerializableStruct>>`.
-- The `TryInto::Error` type can be anything that implements `Into<anyhow::Error>`.
-- `TryFrom<String>` and `From<SerializableStruct>` will also work, using the blanket impl from the core library. 
-ue
-### custom_type! with manual conversions
-
-You can also manually specify the conversions by passing extra params to the
-macro.   Use this when the trait implementations do not exist, or they aren't
-desirable for some reason.
+You can also manually specify the conversions by passing extra params to the macro.
+Use this when the trait implementations do not exist, or they aren't desirable for some reason.
 
 ```rust
 uniffi::custom_type!(SerializableStruct, String, {
+    // Lowering our Rust SerializableStruct into a String.
     lower: |s| s.serialize(),
+    // Lifting our foreign String into our Rust SerializableStruct
     try_lift: |s| s.deserialize(),
 });
 ```
 
-### custom_newtype!
+If you do not supply conversions to and from the bridge type, and assuming `SerializableStruct` and `String`, the following is used:
 
-The custom_newtype! macro is able to handle Rust newtype-style structs which wrap a UniFFI type.
+- Values lowered to the foreign code will be converted using `Into<String>` then lowered as a `String` value.
+- Values lifted to the Rust code (eg, a `String`) is then converted using `<String as TryInto<SerializableStruct>>`;
+the `TryInto::Error` type can be anything that implements `Into<anyhow::Error>`.
+- `TryFrom<String>` and `From<SerializableStruct>` will also work, using the blanket impl from the core library.
 
+### `custom_newtype!`
+
+The `custom_newtype!` macro is able to handle Rust newtype-style structs which wrap a UniFFI type.
+
+eg, our `Handle` object above could be declared as:
 ```rust
-/// handle which wraps an integer
+/// Handle which wraps an integer
 pub struct Handle(i64);
 
 /// `Handle` objects will be passed across the FFI the same way `i64` values are.
@@ -99,13 +87,26 @@ followed by the custom type.
 typedef i64 Handle;
 ```
 
-**note**: UDL users still need to call the `custom_type!` or `custom_newtype!` macro in their Rust
-code.
+**note**: you must still call the `custom_type!` or `custom_newtype!` macros in your Rust code, as described above.
 
+
+#### Using custom types from other crates
+
+To use custom types from other crates from UDL, use a typedef wrapped with the `[External]` attribute.
+
+For example, if another crate wanted to use the examples here:
+
+```idl
+[External="crate_defining_handle_name"]
+typedef i64 Handle;
+
+[External="crate_defining_log_record_name"]
+typedef dictionary LogRecord;
+```
 ## User-defined types
 
 All examples so far in this section convert the custom type to a builtin type.
-It's also possible to convert them to a user-defined type (Record, Enum, interface, etc.).
+It's also possible to convert them to a user-defined type (Record, Enum, Interface, etc.).
 For example you might want to convert `log::Record` class into a UniFFI record:
 
 ```rust
@@ -123,10 +124,10 @@ uniffi::custom_type!(LogRecord, LogRecordData, {
         level: r.level(),
         message: r.to_string(),
     }
-    try_lift: |r| LogRecord::builder()
+    try_lift: |r| Ok(LogRecord::builder()
         .level(r.level)
         .args(format_args!("{}", r.message))
-        .build()
+        .build())
 });
 
 ```
@@ -225,16 +226,3 @@ Here's how the configuration works in `uniffi.toml`.
   * `lift`: Expression to convert the UDL type to the custom type.  `{}` will be replaced with the value of the UDL type.
   * `lower`: Expression to convert the custom type to the UDL type.  `{}` will be replaced with the value of the custom type.
   * `imports` (Optional) list of modules to import for your `lift`/`lower` functions.
-
-## Using custom types from other crates
-
-To use custom types from other crates, use a typedef wrapped with the `[External]` attribute.
-For example, if another crate wanted to use the examples above:
-
-```idl
-[External="crate_defining_handle_name"]
-typedef i64 Handle;
-
-[External="crate_defining_log_record_name"]
-typedef dictionary LogRecord;
-```
