@@ -20,6 +20,15 @@
 
 - HashMaps in UDL now support a default value with an empty map ([#2539](https://github.com/mozilla/uniffi-rs/pull/2539)).
 
+XXX - thiss change log is missing 29.2??
+
+- Procmacros support `#[uniffi(default)]` on a field or `#[uniffi::export(default(arg_name))]` on a function,
+  which takes the default value for the type. Named types can also have a default.
+
+### ⚠️ Breaking Changes ⚠️
+
+- `#[uniffi(default)]` changes will break external bindings with a change to how defaults are represented.
+
 [All changes in [[UnreleasedUniFFIVersion]]](https://github.com/mozilla/uniffi-rs/compare/v0.29.1...HEAD).
 
 ## v0.29.1 (backend crates: v0.29.1) - (_2025-03-18_)
