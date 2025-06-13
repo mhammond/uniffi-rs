@@ -149,7 +149,13 @@ pub struct Argument {
     pub name: String,
     pub ty: TypeNode,
     pub optional: bool,
-    pub default: Option<LiteralNode>,
+    pub default: Option<DefaultValue>,
+}
+
+#[derive(Debug, Clone, Node)]
+pub enum DefaultValue {
+    Default(TypeNode),
+    Literal(LiteralNode),
 }
 
 #[derive(Debug, Clone, Node)]
@@ -208,7 +214,7 @@ pub enum FieldsKind {
 pub struct Field {
     pub name: String,
     pub ty: TypeNode,
-    pub default: Option<LiteralNode>,
+    pub default: Option<DefaultValue>,
     pub docstring: Option<String>,
 }
 
