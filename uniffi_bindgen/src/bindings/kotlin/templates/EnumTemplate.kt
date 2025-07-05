@@ -62,7 +62,14 @@ sealed class {{ type_name }}{% if contains_object_references %}: Disposable {% e
         {%- call kt::docstring(field, 8) %}
         val {% call kt::field_name(field, loop.index) %}: {{ field|type_name(ci) }}{% if loop.last %}{% else %}, {% endif %}
         {%- endfor -%}
-    ) : {{ type_name }}() {
+    ) : {{ type_name }}()
+        {# we need uniffi trait methods on each variant's data-class #}
+        {%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
+        {%- if uniffi_trait_methods.ord_cmp.is_some() %}
+        , Comparable<{{ type_name }}>
+        {%- endif %}
+    {
+        {% call kt::uniffi_trait_impls(uniffi_trait_methods) %}
         companion object
     }
     {%- endif %}
