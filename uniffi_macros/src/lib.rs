@@ -31,8 +31,12 @@ mod test;
 mod util;
 
 use self::{
-    derive::DeriveOptions, enum_::expand_enum, error::expand_error, export::expand_export,
-    object::expand_object, record::expand_record,
+    derive::DeriveOptions,
+    enum_::expand_enum,
+    error::expand_error,
+    export::{expand_export, ExportItemQualifier},
+    object::expand_object,
+    record::expand_record,
 };
 
 /// A macro to build testcases for a component's generated bindings.
@@ -74,7 +78,7 @@ pub fn setup_scaffolding(tokens: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn export(attr_args: TokenStream, input: TokenStream) -> TokenStream {
-    do_export(attr_args, input, true, false)
+    do_export(attr_args, input, true, false, None)
 }
 
 fn do_export(
@@ -82,12 +86,13 @@ fn do_export(
     input: TokenStream,
     keep_input: bool,
     udl_mode: bool,
+    type_qualifier: Option<ExportItemQualifier>,
 ) -> TokenStream {
     let copied_input = keep_input.then(|| proc_macro2::TokenStream::from(input.clone()));
 
     let gen_output = || {
         let item = syn::parse(input)?;
-        expand_export(item, attr_args, udl_mode)
+        expand_export(item, attr_args, type_qualifier, udl_mode)
     };
     let output = gen_output().unwrap_or_else(syn::Error::into_compile_error);
 
@@ -104,7 +109,7 @@ fn do_export(
 #[doc(hidden)]
 #[proc_macro_attribute]
 pub fn export_for_udl(attrs: TokenStream, input: TokenStream) -> TokenStream {
-    do_export(attrs, input, false, true)
+    do_export(attrs, input, false, true, None)
 }
 
 // This is for attributes on items we also `udl_derive`. It always keeps the input tokens
@@ -112,7 +117,14 @@ pub fn export_for_udl(attrs: TokenStream, input: TokenStream) -> TokenStream {
 #[doc(hidden)]
 #[proc_macro_attribute]
 pub fn export_for_udl_derive(attrs: TokenStream, input: TokenStream) -> TokenStream {
-    do_export(attrs, input, true, true)
+    do_export(attrs, input, true, true, None)
+}
+
+// *sob*
+#[doc(hidden)]
+#[proc_macro_attribute]
+pub fn export_for_record(attrs: TokenStream, input: TokenStream) -> TokenStream {
+    do_export(attrs, input, true, false, Some(ExportItemQualifier::Record))
 }
 
 #[proc_macro_derive(Record, attributes(uniffi))]

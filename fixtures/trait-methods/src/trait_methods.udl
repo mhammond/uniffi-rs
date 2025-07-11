@@ -10,3 +10,5 @@ interface UdlEnum {
     S(string s);
     I(i8 i);
 };
+
+// TODO: UDL Records.
