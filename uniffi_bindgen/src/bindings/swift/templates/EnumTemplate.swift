@@ -1,6 +1,7 @@
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 {%- call swift::docstring(e, 0) %}
+{%- let uniffi_trait_methods = e.uniffi_trait_methods() %}
 {% match e.variant_discr_type() %}
 {% when None %}
 public enum {{ type_name }} {
@@ -10,7 +11,6 @@ public enum {{ type_name }} {
         {%- call swift::field_list_decl(variant, variant.has_nameless_fields()) %}
     ){% endif -%}
     {% endfor %}
-}
 {% when Some(variant_discr_type) %}
 public enum {{ type_name }} : {{ variant_discr_type|type_name }} {
     {% for variant in e.variants() %}
@@ -19,9 +19,9 @@ public enum {{ type_name }} : {{ variant_discr_type|type_name }} {
         {%- call swift::field_list_decl(variant, variant.has_nameless_fields()) %}
     ){% endif -%}
     {% endfor %}
-}
 {% endmatch %}
-
+    {% call swift::uniffi_trait_impls(uniffi_trait_methods) %}
+}
 #if compiler(>=6)
 extension {{ type_name }}: Sendable {}
 #endif
@@ -87,13 +87,26 @@ public func {{ ffi_converter_name }}_lower(_ value: {{ type_name }}) -> RustBuff
     return {{ ffi_converter_name }}.lower(value)
 }
 
-{% if !contains_object_references %}
-extension {{ type_name }}: Equatable, Hashable {}
-{% if config.generate_codable_conformance() %}
+{%- if !contains_object_references %}
+{# We auto-generate `Equatable, Hashable`, but only if we have no objects, and
+   that's almost certainly because we didn't have `Eq` for objects. But now we do.
+   We also offer the ability to override the entire enum, so we can probably make this better.
+#}
+{%-     if uniffi_trait_methods.eq_eq.is_none() %}
+extension {{ type_name }}: Equatable {}
+{%-     endif %}
+{%-     if uniffi_trait_methods.hash_hash.is_none() %}
+extension {{ type_name }}: Hashable {}
+{%-     endif %}
+
+{# Not clear if `generate_codable_conformance` actually needs to avoid objects too? #}
+{%-     if config.generate_codable_conformance() %}
 extension {{ type_name }}: Codable {}
-{% endif %}
+{%-     endif %}
 {% endif %}
 
 {% if config.generate_case_iterable_conformance() && !e.contains_variant_fields() %}
 extension {{ type_name }}: CaseIterable {}
 {% endif %}
+
+{% call swift::uniffi_trait_extensions(e.uniffi_trait_methods()) %}

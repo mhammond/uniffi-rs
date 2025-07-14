@@ -15,3 +15,19 @@ assert(set.contains(TraitMethods(name: "yo")))
 // ord
 assert(m < TraitMethods(name: "zo"))
 assert(TraitMethods(name: "zo") > m)
+
+// Enums
+let e = UdlEnum.s(s: "yo")
+assert(String(describing: e) == "UdlEnum::S { s: \"yo\" }")
+assert(String(reflecting: e) == "S { s: \"yo\" }")
+
+let u = TraitEnum.i(0)
+assert(String(describing: u) == "TraitEnum::I(0)")
+assert(String(reflecting: u) == "I(0)")
+
+assert(u == TraitEnum.i(1))
+assert(TraitEnum.s("hi") < TraitEnum.i(1))
+
+let u_set: Set = [TraitEnum.i(0)]
+assert(u_set.contains(TraitEnum.i(1)))
+assert(!u_set.contains(TraitEnum.s("")))

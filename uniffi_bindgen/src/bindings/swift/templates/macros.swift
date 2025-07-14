@@ -12,7 +12,13 @@
         rustCall() {
     {%- endif %}
     {{ func.ffi_func().name() }}(
-        {%- if func.self_type().is_some() %}self.uniffiCloneHandle(),{% endif %}
+        {%- match func.self_type() %}
+        {%-     when Some(Type::Object { .. }) %}
+            self.uniffiCloneHandle(),
+        {%-     when Some(t) %}
+            {{ t|lower_fn }}(self),
+        {%-     when None %}
+        {%- endmatch %}
         {%- call arg_list_lowered(func) -%} $0
     )
 }
@@ -175,4 +181,68 @@ v{{- field_num -}}
 
 {%- macro docstring(defn, indent_spaces) %}
 {%- call docstring_value(defn.docstring(), indent_spaces) %}
+{%- endmacro %}
+
+// macro for uniffi_trait implementations.
+{% macro uniffi_trait_impls(uniffi_trait_methods) %}
+{%- if let Some(fmt) = uniffi_trait_methods.debug_fmt %}
+    // The local Rust `Debug` implementation.
+    public var debugDescription: String {
+        return {% call is_try(fmt) %} {{ fmt.return_type().unwrap()|lift_fn }}(
+            {% call to_ffi_call(fmt) %}
+        )
+    }
+{%- endif %}
+{%- if let Some(fmt) = uniffi_trait_methods.display_fmt %}
+    // The local Rust `Display` implementation.
+    public var description: String {
+        return {% call is_try(fmt) %} {{ fmt.return_type().unwrap()|lift_fn }}(
+            {% call to_ffi_call(fmt) %}
+        )
+    }
+{%- endif %}
+{%- if let Some(eq) = uniffi_trait_methods.eq_eq %}
+    // The local Rust `Eq` implementation - only `eq` is used.
+    public static func == (self: {{ eq.object_name() }}, other: {{ eq.object_name() }}) -> Bool {
+        return {% call is_try(eq) %} {{ eq.return_type().unwrap()|lift_fn }}(
+            {% call to_ffi_call(eq) %}
+        )
+    }
+{%- endif %}
+{%- if let Some(hash) = uniffi_trait_methods.hash_hash %}
+    // The local Rust `Hash` implementation
+    public func hash(into hasher: inout Hasher) {
+        let val = {% call is_try(hash) %} {{ hash.return_type().unwrap()|lift_fn }}(
+            {% call to_ffi_call(hash) %}
+        )
+        hasher.combine(val)
+    }
+{%- endif %}
+{%- if let Some(cmp) = uniffi_trait_methods.ord_cmp %}
+    // The local Rust `Ord` implementation
+    public static func < (self: {{ cmp.object_name() }}, other: {{ cmp.object_name() }}) -> Bool {
+        return {% call is_try(cmp) %} {{ cmp.return_type().unwrap()|lift_fn }}(
+            {% call to_ffi_call(cmp) %}
+        ) < 0
+    }
+{%- endif %}
+{%- endmacro %}
+
+// macro for declaring extension conformance for uniffi_traits.
+{% macro uniffi_trait_extensions(uniffi_trait_methods) %}
+{%- if let Some(meth) = uniffi_trait_methods.debug_fmt %}
+extension {{ meth.object_name() }}: CustomDebugStringConvertible {}
+{%- endif %}
+{%- if let Some(meth) = uniffi_trait_methods.display_fmt %}
+extension {{ meth.object_name() }}: CustomStringConvertible {}
+{%- endif %}
+{%- if let Some(meth) = uniffi_trait_methods.eq_eq %}
+extension {{ meth.object_name() }}: Equatable {}
+{%- endif %}
+{%- if let Some(meth) = uniffi_trait_methods.hash_hash %}
+extension {{ meth.object_name() }}: Hashable {}
+{%- endif %}
+{%- if let Some(meth) = uniffi_trait_methods.ord_cmp %}
+extension {{ meth.object_name() }}: Comparable {}
+{%- endif %}
 {%- endmacro %}
