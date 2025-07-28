@@ -432,6 +432,24 @@ fn get_say_after_udl_traits() -> Vec<Arc<dyn SayAfterUdlTrait>> {
     vec![Arc::new(SayAfterImpl1), Arc::new(SayAfterImpl2)]
 }
 
+// An implementation of the trait using tokio.
+#[derive(uniffi::Object)]
+struct SayAfterTokio;
+
+#[uniffi::export(async_runtime = "tokio")]
+#[async_trait::async_trait]
+impl SayAfterTrait for SayAfterTokio {
+    async fn say_after(&self, ms: u16, who: String) -> String {
+        say_after_with_tokio(ms, who).await
+    }
+}
+
+#[uniffi::export]
+fn get_say_after_tokio() -> Arc<SayAfterTokio> {
+    Arc::new(SayAfterTokio)
+}
+
+
 // Async callback interface implemented in foreign code
 #[uniffi::export(with_foreign)]
 #[async_trait::async_trait]

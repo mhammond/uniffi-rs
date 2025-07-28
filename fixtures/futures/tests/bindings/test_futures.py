@@ -203,6 +203,15 @@ class TestFutures(unittest.TestCase):
 
         asyncio.run(test())
 
+    def test_trait_impl_with_tokio(self):
+        async def test():
+            t = get_say_after_tokio()
+            #self.assertTrue(isinstance(t, SayAfterTrait))
+            v = await t.say_after(100, 'Alice')
+            self.assertEqual(v, "Hello, Alice (with Tokio)!")
+
+        asyncio.run(test())
+
     def test_fallible(self):
         async def test():
             result = await fallible_me(False)
