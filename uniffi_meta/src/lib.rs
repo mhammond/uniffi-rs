@@ -500,14 +500,14 @@ impl UniffiTraitDiscriminants {
 pub struct ObjectTraitImplMetadata {
     pub ty: Type,
     pub trait_name: String,
-    pub tr_module_path: Option<String>,
+    pub trait_type: Type,
 }
 
 impl Checksum for ObjectTraitImplMetadata {
     fn checksum<H: Hasher>(&self, state: &mut H) {
         Checksum::checksum(&self.ty, state);
         Checksum::checksum(&self.trait_name, state);
-        Checksum::checksum(&self.tr_module_path, state);
+        Checksum::checksum(&self.trait_type, state);
     }
 }
 

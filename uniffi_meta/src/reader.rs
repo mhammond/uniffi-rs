@@ -420,7 +420,7 @@ impl<'a> MetadataReader<'a> {
         Ok(ObjectTraitImplMetadata {
             ty: self.read_type()?,
             trait_name: self.read_string()?,
-            tr_module_path: self.read_optional_string()?,
+            trait_type: self.read_type()?,
         })
     }
 
