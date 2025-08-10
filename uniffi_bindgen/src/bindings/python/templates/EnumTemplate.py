@@ -4,24 +4,24 @@
 # when none of the variants have associated data, or a generic nested-class
 # construct when they do.
 #}
-{%- let type_name = e.self_type.type_name %}
-{% if e.is_flat %}
+{%- let type_name = self_type.type_name %}
+{% if is_flat %}
 
 class {{ type_name }}(enum.Enum):
-    {{ e.docstring|docstring(4) -}}
-    {%- for variant in e.variants %}
+    {{ docstring|docstring(4) -}}
+    {%- for variant in variants %}
     {{ variant.name }} = {{ variant.discr.py_lit }}
     {{ variant.docstring|docstring(4) -}}
     {% endfor %}
 {% else %}
 
 class {{ type_name }}:
-    {{ e.docstring|docstring(4) -}}
+    {{ docstring|docstring(4) -}}
     def __init__(self):
         raise RuntimeError("{{ type_name }} cannot be instantiated directly")
 
     # Each enum variant is a nested class of the enum itself.
-    {% for variant in e.variants -%}
+    {% for variant in variants -%}
     class {{ variant.name }}:
         {{ variant.docstring|docstring(8) -}}
 
@@ -82,7 +82,7 @@ class {{ type_name }}:
 
     # For each variant, we have `is_NAME` and `is_name` methods for easily checking
     # whether an instance is that variant.
-    {% for variant in e.variants -%}
+    {% for variant in variants -%}
     def is_{{ variant.name }}(self) -> bool:
         return isinstance(self, {{ type_name }}.{{ variant.name }})
 
@@ -96,20 +96,20 @@ class {{ type_name }}:
 # Now, a little trick - we make each nested variant class be a subclass of the main
 # enum class, so that method calls and instance checks etc will work intuitively.
 # We might be able to do this a little more neatly with a metaclass, but this'll do.
-{% for variant in e.variants -%}
+{% for variant in variants -%}
 {{ type_name }}.{{ variant.name }} = type("{{ type_name }}.{{ variant.name }}", ({{ type_name }}.{{variant.name}}, {{ type_name }},), {})  # type: ignore
 {% endfor %}
 
 {% endif %}
 
-class {{ e.self_type.ffi_converter_name }}(_UniffiConverterRustBuffer):
+class {{ self_type.ffi_converter_name }}(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         variant = buf.read_i32()
 
-        {%- for variant in e.variants %}
+        {%- for variant in variants %}
         if variant == {{ loop.index }}:
-            {%- if e.is_flat %}
+            {%- if is_flat %}
             return {{ type_name }}.{{variant.name}}
             {%- else %}
             return {{ type_name }}.{{variant.name}}(
@@ -123,11 +123,11 @@ class {{ e.self_type.ffi_converter_name }}(_UniffiConverterRustBuffer):
 
     @staticmethod
     def check_lower(value):
-        {%- if e.variants.is_empty() %}
+        {%- if variants.is_empty() %}
         pass
         {%- else %}
-        {%- for variant in e.variants %}
-        {%- if e.is_flat %}
+        {%- for variant in variants %}
+        {%- if is_flat %}
         if value == {{ type_name }}.{{ variant.name }}:
         {%- else %}
         if value.is_{{ variant.name }}():
@@ -146,8 +146,8 @@ class {{ e.self_type.ffi_converter_name }}(_UniffiConverterRustBuffer):
 
     @staticmethod
     def write(value, buf):
-        {%- for variant in e.variants %}
-        {%- if e.is_flat %}
+        {%- for variant in variants %}
+        {%- if is_flat %}
         if value == {{ type_name }}.{{ variant.name }}:
             buf.write_i32({{ loop.index }})
         {%- else %}

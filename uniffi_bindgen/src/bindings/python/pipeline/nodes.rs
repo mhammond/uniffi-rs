@@ -73,20 +73,31 @@ pub struct Function {
     pub docstring: Option<String>,
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", ext = "txt", escape = "none")]
 pub enum TypeDefinition {
+    #[template(source = "{{ self.0 }}")]
     Interface(Interface),
+    #[template(source = "{{ self.0 }}")]
     CallbackInterface(CallbackInterface),
+    #[template(source = "{{ self.0 }}")]
     Record(Record),
+    #[template(source = "{{ self.0 }}")]
     Enum(Enum),
+    #[template(source = "{{ self.0 }}")]
     Custom(CustomType),
     /// Type that doesn't contain any other type
+    #[template(path = "Types.py")]
     Simple(TypeNode),
     /// Compound types
+    #[template(source = "{{ self.0 }}")]
     Optional(OptionalType),
+    #[template(source = "{{ self.0 }}")]
     Sequence(SequenceType),
+    #[template(source = "{{ self.0 }}")]
     Map(MapType),
     /// User types that are defined in another crate
+    #[template(source = "")]
     External(ExternalType),
 }
 
@@ -216,7 +227,8 @@ pub enum Radix {
     Hexadecimal = 16,
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", escape = "none", path = "RecordTemplate.py")]
 pub struct Record {
     pub name: String,
     pub fields_kind: FieldsKind,
@@ -246,7 +258,8 @@ pub enum EnumShape {
     Error { flat: bool },
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", escape = "none", path = "EnumOrErrorTemplate.py")]
 pub struct Enum {
     pub name: String,
     /// Is this a "flat" enum -- one with no associated data
@@ -269,7 +282,8 @@ pub struct Variant {
     pub docstring: Option<String>,
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", escape = "none", path = "InterfaceTemplate.py")]
 pub struct Interface {
     pub name: String,
     pub base_classes: Vec<String>,
@@ -295,7 +309,8 @@ pub struct Protocol {
     pub methods: Vec<Method>,
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", escape = "none", path = "CallbackInterfaceTemplate.py")]
 pub struct CallbackInterface {
     pub name: String,
     pub docstring: Option<String>,
@@ -336,7 +351,8 @@ pub struct ObjectTraitImpl {
     pub trait_ty: TypeNode,
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", escape = "none", path = "CustomType.py")]
 pub struct CustomType {
     pub name: String,
     pub builtin: TypeNode,
@@ -345,19 +361,22 @@ pub struct CustomType {
     pub self_type: TypeNode,
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", escape = "none", path = "OptionalTemplate.py")]
 pub struct OptionalType {
     pub inner: TypeNode,
     pub self_type: TypeNode,
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", escape = "none", path = "SequenceTemplate.py")]
 pub struct SequenceType {
     pub inner: TypeNode,
     pub self_type: TypeNode,
 }
 
-#[derive(Debug, Clone, Node)]
+#[derive(Debug, Clone, Node, Template)]
+#[template(syntax = "py", escape = "none", path = "MapTemplate.py")]
 pub struct MapType {
     pub key: TypeNode,
     pub value: TypeNode,

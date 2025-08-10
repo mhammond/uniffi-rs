@@ -72,7 +72,7 @@ def _uniffi_trait_interface_call_async(make_call, uniffi_out_dropped_callback, h
             traceback.print_exc(file=sys.stderr)
             handle_error(
                 _UniffiRustCallStatus.CALL_UNEXPECTED_ERROR,
-                {{ string_type_node.ffi_converter_name }}.lower(repr(e)),
+                {{ askama::get_value::<&str>("string_ffi_converter_name").unwrap() }}.lower(repr(e)),
             )
     eventloop = _uniffi_get_event_loop()
     task = asyncio.run_coroutine_threadsafe(make_call_and_call_callback(), eventloop)
@@ -94,7 +94,7 @@ def _uniffi_trait_interface_call_async_with_error(make_call, uniffi_out_dropped_
             traceback.print_exc(file=sys.stderr)
             handle_error(
                 _UniffiRustCallStatus.CALL_UNEXPECTED_ERROR,
-                {{ string_type_node.ffi_converter_name }}.lower(repr(e)),
+                {{ askama::get_value::<&str>("string_ffi_converter_name").unwrap() }}.lower(repr(e)),
             )
     eventloop = _uniffi_get_event_loop()
     task = asyncio.run_coroutine_threadsafe(make_call_and_call_callback(), eventloop)

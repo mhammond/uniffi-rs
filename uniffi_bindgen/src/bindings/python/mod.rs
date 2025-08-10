@@ -6,6 +6,8 @@ use anyhow::Result;
 use askama::Template;
 use camino::Utf8Path;
 use fs_err as fs;
+use std::any::Any;
+use std::collections::HashMap;
 
 pub mod filters;
 mod pipeline;
@@ -20,9 +22,19 @@ pub fn run_pipeline(initial_root: pipeline::initial::Root, out_dir: &Utf8Path) -
     if !out_dir.exists() {
         fs::create_dir_all(out_dir)?;
     }
-    for module in python_root.namespaces.values() {
-        let path = out_dir.join(format!("{}.py", module.name));
-        let content = module.render()?;
+    for namespace in python_root.namespaces.values() {
+        //let mut values: BTreeMap<&str, Box<dyn Any>> = BTreeMap::new();
+        //values.insert("string_ffi_converter_name", Box::new(module.string_type_node.ffi_converter_name.clone()));
+        // let values: (&str, &dyn Any) = ("string_ffi_converter_name", &module.string_type_node.ffi_converter_name);
+        let mut values: HashMap<&str, Box<dyn Any>> = HashMap::new();
+        //values.insert("string_ffi_converter_name", Box::new("wtf_ffi_conv"));
+
+        let mut content = namespace.render_with_values(&values)?;
+        for t in &namespace.type_definitions {
+            content += &t.render_with_values(&values)?;
+        }
+        // types, functions, string
+        let path = out_dir.join(format!("{}.py", namespace.name));
         println!("writing {path}");
         fs::write(path, content)?;
     }

@@ -1,12 +1,11 @@
-{%- let protocol = int.protocol %}
-{%- let ffi_converter_name = int.self_type.ffi_converter_name %}
+{%- let ffi_converter_name = self_type.ffi_converter_name %}
 {%- include "Protocol.py" %}
 
-class {{ int.name }}({{ int.base_classes|join(", ") }}):
-    {{ int.docstring|docstring(4) }}
+class {{ name }}({{ base_classes|join(", ") }}):
+    {{ docstring|docstring(4) }}
     _handle: ctypes.c_uint64
 
-{%- for cons in int.constructors %}
+{%- for cons in constructors %}
 {%-     let callable = cons.callable %}
 {%-     if callable.is_primary_constructor() && callable.is_async %}
     def __init__(self, *args, **kw):
@@ -27,7 +26,7 @@ class {{ int.name }}({{ int.base_classes|join(", ") }}):
 {%-     endif %}
 {%- endfor %}
 
-{%- if !int.has_primary_constructor %}
+{%- if !has_primary_constructor %}
     {# Define __init__ to prevent construction without a handle, which can confuse #}
     def __init__(self, *args, **kwargs):
         raise ValueError("This class has no default constructor")
@@ -37,10 +36,10 @@ class {{ int.name }}({{ int.base_classes|join(", ") }}):
         # In case of partial initialization of instances.
         handle = getattr(self, "_handle", None)
         if handle is not None:
-            _uniffi_rust_call(_UniffiLib.{{ int.ffi_func_free.0 }}, handle)
+            _uniffi_rust_call(_UniffiLib.{{ ffi_func_free.0 }}, handle)
 
     def _uniffi_clone_handle(self):
-        return _uniffi_rust_call(_UniffiLib.{{ int.ffi_func_clone.0 }}, self._handle)
+        return _uniffi_rust_call(_UniffiLib.{{ ffi_func_clone.0 }}, self._handle)
 
     # Used by alternative constructors or any methods which return this type.
     @classmethod
@@ -51,7 +50,7 @@ class {{ int.name }}({{ int.base_classes|join(", ") }}):
         inst._handle = handle
         return inst
 
-{%- for meth in int.methods -%}
+{%- for meth in methods -%}
 {%-     let callable = meth.callable %}
     {% if callable.is_async %}async {% endif %}def {{ callable.name }}(self, {% include "CallableArgs.py" %}):
         {{ meth.docstring|docstring(8) -}}
@@ -60,7 +59,6 @@ class {{ int.name }}({{ int.base_classes|join(", ") }}):
         {%- endfilter %}
 {%- endfor %}
 
-{%- let uniffi_trait_methods = int.uniffi_trait_methods %}
 {%- if let Some(fmt) = uniffi_trait_methods.debug_fmt %}
 {%-    let callable = fmt.callable %}
     # The Rust `Debug::fmt`` implementation.
@@ -82,7 +80,7 @@ class {{ int.name }}({{ int.base_classes|join(", ") }}):
 {%-    let callable = eq.callable %}
     # The Rust `Eq::eq`` implementation.
     def __eq__(self, other: object) -> {{ callable.return_type.type_name }}:
-        if not isinstance(other, {{ int.self_type.type_name }}):
+        if not isinstance(other, {{ self_type.type_name }}):
             return NotImplemented
 
         {% filter indent(8) -%}
@@ -93,7 +91,7 @@ class {{ int.name }}({{ int.base_classes|join(", ") }}):
 {%-    let callable = ne.callable %}
     # The Rust `Eq::ne`` implementation.
     def __ne__(self, other: object) -> {{ callable.return_type.type_name }}:
-        if not isinstance(other, {{ int.self_type.type_name }}):
+        if not isinstance(other, {{ self_type.type_name }}):
             return NotImplemented
         {% filter indent(8) -%}
         {% include "CallableBody.py" -%}
@@ -131,7 +129,7 @@ class {{ int.name }}({{ int.base_classes|join(", ") }}):
 {%- endif %}
 
 {# Objects as error #}
-{%- if int.self_type.is_used_as_error %}
+{%- if self_type.is_used_as_error %}
 {# Due to some mismatches in the ffi converter mechanisms, errors are forced to be a RustBuffer #}
 class {{ ffi_converter_name }}__as_error(_UniffiConverterRustBuffer):
     @classmethod
@@ -154,32 +152,32 @@ class {{ ffi_converter_name }}__as_error(_UniffiConverterRustBuffer):
 
 {%- endif %}
 
-{%- match int.vtable %}
+{%- match vtable %}
 {%- when None %}
 {# simple case: the interface can only be implemented in Rust #}
 class {{ ffi_converter_name }}:
     @staticmethod
-    def lift(value: int) -> {{ int.name }}:
-        return {{ int.name }}._uniffi_make_instance(value)
+    def lift(value: int) -> {{ name }}:
+        return {{ name }}._uniffi_make_instance(value)
 
     @staticmethod
-    def check_lower(value: {{ int.name }}):
-        if not isinstance(value, {{ int.name }}):
-            raise TypeError("Expected {{ int.name }} instance, {} found".format(type(value).__name__))
+    def check_lower(value: {{ name }}):
+        if not isinstance(value, {{ name }}):
+            raise TypeError("Expected {{ name }} instance, {} found".format(type(value).__name__))
 
     @staticmethod
-    def lower(value: {{ int.name }}) -> ctypes.c_uint64:
+    def lower(value: {{ name }}) -> ctypes.c_uint64:
         return value._uniffi_clone_handle()
 
     @classmethod
-    def read(cls, buf: _UniffiRustBuffer) -> {{ int.name }}:
+    def read(cls, buf: _UniffiRustBuffer) -> {{ name }}:
         ptr = buf.read_u64()
         if ptr == 0:
             raise InternalError("Raw handle value was null")
         return cls.lift(ptr)
 
     @classmethod
-    def write(cls, value: {{ int.name }}, buf: _UniffiRustBuffer):
+    def write(cls, value: {{ name }}, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 
 {%- when Some(vtable) %}
@@ -190,7 +188,7 @@ class {{ ffi_converter_name }}:
  # * In the FfiConverter, check which side a handle came from to know how to handle correctly.
  #}
 
-{%- let trait_impl=format!("_UniffiTraitImpl{}", int.name) %}
+{%- let trait_impl=format!("_UniffiTraitImpl{}", self.name) %}
 {%- include "CallbackInterfaceImpl.py" %}
 
 class {{ ffi_converter_name }}:
@@ -201,7 +199,7 @@ class {{ ffi_converter_name }}:
         if (value & 1) == 0:
             # Rust-generated handle, construct a new class that uses the handle to implement the
             # interface
-            return {{ int.name }}._uniffi_make_instance(value)
+            return {{ name }}._uniffi_make_instance(value)
         else:
             # Python-generated handle, get the object from the handle map
             return {{ ffi_converter_name }}._handle_map.remove(value)
@@ -213,7 +211,7 @@ class {{ ffi_converter_name }}:
 
     @staticmethod
     def lower(value: {{ protocol.name }}):
-         if isinstance(value, {{ int.name }}):
+         if isinstance(value, {{ name }}):
             # Rust-implementated object.  Clone the handle and return it
             return value._uniffi_clone_handle()
          else:

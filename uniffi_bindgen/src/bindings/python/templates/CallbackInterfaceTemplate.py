@@ -1,7 +1,5 @@
-{%- let protocol = cbi.protocol %}
-{%- let vtable = cbi.vtable %}
-{%- let trait_impl=format!("_UniffiTraitImpl{}", cbi.name) %}
-{%- let ffi_converter_name = cbi.self_type.ffi_converter_name %}
+{%- let trait_impl=format!("_UniffiTraitImpl{}", self.name) %}
+{%- let ffi_converter_name = self_type.ffi_converter_name %}
 
 {% include "Protocol.py" %}
 {% include "CallbackInterfaceImpl.py" %}

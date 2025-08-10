@@ -1,4 +1,4 @@
-{%- let type_name = e.self_type.type_name %}
+{%- let type_name = self_type.type_name %}
 # {{ type_name }}
 # We want to define each variant as a nested class that's also a subclass,
 # which is tricky in Python.  To accomplish this we're going to create each
@@ -6,16 +6,16 @@
 # __dict__.  All of this happens in dummy class to avoid polluting the module
 # namespace.
 class {{ type_name }}(Exception):
-    {{ e.docstring|docstring(4) -}}
+    {{ docstring|docstring(4) -}}
     pass
 
 _UniffiTemp{{ type_name }} = {{ type_name }}
 
 class {{ type_name }}:  # type: ignore
-    {{ e.docstring|docstring(4) -}}
-    {%- for variant in e.variants -%}
+    {{ docstring|docstring(4) -}}
+    {%- for variant in variants -%}
     {%- let variant_type_name = variant.name -%}
-    {%- if e.is_flat %}
+    {%- if is_flat %}
     class {{ variant_type_name }}(_UniffiTemp{{ type_name }}):
         {{ variant.docstring|docstring(8) -}}
 
@@ -65,15 +65,15 @@ class {{ type_name }}:  # type: ignore
 del _UniffiTemp{{ type_name }}
 
 
-class {{ e.self_type.ffi_converter_name }}(_UniffiConverterRustBuffer):
+class {{ self_type.ffi_converter_name }}(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         variant = buf.read_i32()
-        {%- for variant in e.variants %}
+        {%- for variant in variants %}
         if variant == {{ loop.index }}:
             return {{ type_name }}.{{ variant.name }}(
-                {%- if e.is_flat %}
-                {{ string_type_node.ffi_converter_name }}.read(buf),
+                {%- if is_flat %}
+                {{ askama::get_value::<&str>("string_ffi_converter_name").unwrap() }}.read(buf),
                 {%- else %}
                 {%- for field in variant.fields %}
                 {{ field.ty.ffi_converter_name }}.read(buf),
@@ -85,10 +85,10 @@ class {{ e.self_type.ffi_converter_name }}(_UniffiConverterRustBuffer):
 
     @staticmethod
     def check_lower(value):
-        {%- if e.variants.is_empty() %}
+        {%- if variants.is_empty() %}
         pass
         {%- else %}
-        {%- for variant in e.variants %}
+        {%- for variant in variants %}
         if isinstance(value, {{ type_name }}.{{ variant.name }}):
             {%- for field in variant.fields %}
             {%-     if variant.has_unnamed_fields() %}
@@ -103,7 +103,7 @@ class {{ e.self_type.ffi_converter_name }}(_UniffiConverterRustBuffer):
 
     @staticmethod
     def write(value, buf):
-        {%- for variant in e.variants %}
+        {%- for variant in variants %}
         if isinstance(value, {{ type_name }}.{{ variant.name }}):
             buf.write_i32({{ loop.index }})
             {%- for field in variant.fields %}

@@ -54,9 +54,6 @@ _DEFAULT = object() # type: typing.Any
 {%- include "Async.py" %}
 {%- endif %}
 
-# Public interface members begin here.
-{% include "Types.py" %}
-
 {%- for func in functions %}
 {%- include "TopLevelFunctionTemplate.py" %}
 {%- endfor %}
